@@ -55,6 +55,7 @@ This mini React implementation includes:
 
 ## TODO
 
+prevDOM is stored globally, should be stored on container. See other global variables and their limitations.
 createElement should support accepting function components.
 Renderer should only render if props have changed.
 SSR hooks.
@@ -63,3 +64,4 @@ Support nested web components.
 useContext()
 useCallback()
 useReducer()
+support style objects not just strings.
