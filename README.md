@@ -51,3 +51,15 @@ This mini React implementation includes:
 ├── package.json     # Project configuration
 └── README.md        # This file
 ``` 
+
+
+## TODO
+
+createElement should support accepting function components.
+Renderer should only render if props have changed.
+SSR hooks.
+Support class components.
+Support nested web components.
+useContext()
+useCallback()
+useReducer()
