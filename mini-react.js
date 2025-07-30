@@ -7,6 +7,16 @@ let rootContainer = null;
 let rootComponent = null;
 let prevVdom = null;
 
+export function createElement(type, props, ...children) {
+  return {
+    type,
+    props: {
+      ...props,
+      children: children.flat().filter(child => child != null)
+    }
+  };
+}
+
 function createDom(node) {
   if (typeof node === 'string' || typeof node === 'number') {
     return document.createTextNode(node);
