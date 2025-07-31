@@ -13,26 +13,46 @@
  */
 
 // ============================================================================
+// COMPONENT FIBER SYSTEM
+// ============================================================================
+
+/**
+ * Component fiber - represents a component instance with its state
+ * Similar to React's fiber architecture for tracking component state
+ */
+class ComponentFiber {
+  constructor(component, props) {
+    this.component = component;
+    this.props = props;
+    this.hooks = [];           // Hook state for this component instance
+    this.effects = [];         // Effects for this component instance
+    this.hookIndex = 0;        // Current hook index for this component
+    this.dom = null;           // Associated DOM element
+    this.children = [];        // Child fibers
+    this.parent = null;        // Parent fiber
+  }
+  
+  /**
+   * Reset hook index for new render cycle
+   */
+  resetHooks() {
+    this.hookIndex = 0;
+    this.effects = [];
+  }
+}
+
+// ============================================================================
 // GLOBAL STATE MANAGEMENT
 // ============================================================================
 
-/** @type {Function|null} Currently executing component function */
-let currentComponent = null;
+/** @type {ComponentFiber|null} Currently executing component fiber */
+let currentFiber = null;
 
-/** @type {number} Index for tracking hook calls within a component */
-let hookIndex = 0;
-
-/** @type {Array} Array to store hook state values */
-let hooks = [];
-
-/** @type {Array} Array to store useEffect callbacks and metadata */
-let effects = [];
+/** @type {ComponentFiber|null} Root component fiber */
+let rootFiber = null;
 
 /** @type {HTMLElement|null} Root DOM container for the application */
 let rootContainer = null;
-
-/** @type {Function|null} Root component function */
-let rootComponent = null;
 
 /** @type {Object|null} Previous virtual DOM tree for diffing */
 let prevVdom = null;
@@ -72,7 +92,7 @@ export function createElement(type, props, ...children) {
  */
 export function render(component, container) {
   rootContainer = container;
-  rootComponent = component;
+  rootFiber = new ComponentFiber(component, {});
   rerender();
 }
 
@@ -90,6 +110,11 @@ function createDom(node) {
   // Handle text nodes and numbers
   if (typeof node === 'string' || typeof node === 'number') {
     return document.createTextNode(node);
+  }
+  
+  // Handle function components
+  if (typeof node.type === 'function') {
+    return renderComponent(node.type, node.props);
   }
   
   // Create DOM element
@@ -121,6 +146,38 @@ function createDom(node) {
   }
   
   return el;
+}
+
+/**
+ * Renders a function component and returns its DOM
+ * 
+ * @param {Function} component - Component function to render
+ * @param {Object} props - Props to pass to component
+ * @returns {HTMLElement|Text} DOM element for the component
+ */
+function renderComponent(component, props) {
+  // Create or reuse fiber for this component
+  const fiber = new ComponentFiber(component, props);
+  fiber.parent = currentFiber;
+  
+  // Set as current fiber for hook tracking
+  const prevFiber = currentFiber;
+  currentFiber = fiber;
+  
+  // Reset hooks for new render
+  fiber.resetHooks();
+  
+  // Render component
+  const vdom = component(props);
+  
+  // Restore previous fiber
+  currentFiber = prevFiber;
+  
+  // Create DOM from virtual DOM
+  const dom = createDom(vdom);
+  fiber.dom = dom;
+  
+  return dom;
 }
 
 /**
@@ -233,13 +290,11 @@ function updateProps(dom, newProps = {}, oldProps = {}) {
  * Resets hook state and runs effects after rendering
  */
 function rerender() {
-  // Reset hook state for new render cycle
-  hookIndex = 0;
-  effects = [];
-  currentComponent = rootComponent;
+  // Set root fiber as current for hook tracking
+  currentFiber = rootFiber;
   
   // Generate new virtual DOM
-  const vdom = currentComponent();
+  const vdom = rootFiber.component(rootFiber.props);
   
   // Initial render or update existing DOM
   if (prevVdom == null) {
@@ -255,7 +310,20 @@ function rerender() {
   prevVdom = vdom;
   
   // Run effects after DOM updates (similar to React's useEffect timing)
-  setTimeout(runEffects, 0);
+  setTimeout(() => runAllEffects(rootFiber), 0);
+}
+
+/**
+ * Runs all effects for a component and its children
+ * 
+ * @param {ComponentFiber} fiber - Component fiber to run effects for
+ */
+function runAllEffects(fiber) {
+  // Run effects for this component
+  runEffects(fiber);
+  
+  // Recursively run effects for children
+  fiber.children.forEach(child => runAllEffects(child));
 }
 
 // ============================================================================
@@ -274,23 +342,27 @@ function rerender() {
  * const [user, setUser] = useState(() => ({ name: 'John', age: 30 }));
  */
 export function useState(initialValue) {
-  const idx = hookIndex;
+  if (!currentFiber) {
+    throw new Error('useState must be called within a component');
+  }
+  
+  const idx = currentFiber.hookIndex;
   
   // Initialize hook state if it doesn't exist
-  if (hooks.length <= idx) {
+  if (currentFiber.hooks.length <= idx) {
     const value = typeof initialValue === 'function' ? initialValue() : initialValue;
-    hooks.push(value);
+    currentFiber.hooks.push(value);
   }
   
   // Create setState function
   const setState = newValue => {
-    const nextValue = typeof newValue === 'function' ? newValue(hooks[idx]) : newValue;
-    hooks[idx] = nextValue;
+    const nextValue = typeof newValue === 'function' ? newValue(currentFiber.hooks[idx]) : newValue;
+    currentFiber.hooks[idx] = nextValue;
     rerender(); // Trigger re-render when state changes
   };
   
-  const value = hooks[idx];
-  hookIndex++; // Move to next hook for this component
+  const value = currentFiber.hooks[idx];
+  currentFiber.hookIndex++; // Move to next hook for this component
   
   return [value, setState];
 }
@@ -309,14 +381,18 @@ export function useState(initialValue) {
  * }, [count]);
  */
 export function useEffect(fn, deps) {
-  effects.push({
+  if (!currentFiber) {
+    throw new Error('useEffect must be called within a component');
+  }
+  
+  currentFiber.effects.push({
     fn,
     deps,
     lastDeps: undefined,
     cleanup: undefined,
     hasRun: false
   });
-  hookIndex++; // Move to next hook for this component
+  currentFiber.hookIndex++; // Move to next hook for this component
 }
 
 // ============================================================================
@@ -324,11 +400,12 @@ export function useEffect(fn, deps) {
 // ============================================================================
 
 /**
- * Runs all registered effects, handling cleanup and dependency checking
- * Called after each render cycle
+ * Runs all registered effects for a component, handling cleanup and dependency checking
+ * 
+ * @param {ComponentFiber} fiber - Component fiber to run effects for
  */
-function runEffects() {
-  for (const effect of effects) {
+function runEffects(fiber) {
+  for (const effect of fiber.effects) {
     // Check if effect should run (first time or dependencies changed)
     if (!effect.hasRun || !depsAreSame(effect.deps, effect.lastDeps)) {
       // Run cleanup from previous effect if it exists

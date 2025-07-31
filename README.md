@@ -10,6 +10,7 @@ A minimal React-like library that supports `useState` and `useEffect` hooks with
 - ✅ Virtual DOM diffing for efficient updates
 - ✅ Component composition
 - ✅ Event handling
+- ✅ **Per-component hook state tracking** (fixes conditional component rendering issues)
 
 ## Getting Started
 
@@ -27,10 +28,11 @@ npm start
 
 ## Example
 
-The example includes a Counter component that demonstrates:
+The example includes a ConditionalTest component that demonstrates:
 - State management with `useState`
-- Side effects with `useEffect` (updating document title)
-- Component composition with a reusable Button component
+- Side effects with `useEffect` (console logging)
+- Conditional component rendering that maintains hook state correctly
+- Component composition with reusable Button components
 - Event handling
 
 ## How it Works
@@ -38,30 +40,102 @@ The example includes a Counter component that demonstrates:
 This mini React implementation includes:
 - A simple virtual DOM representation
 - Tree diffing algorithm for efficient DOM updates
+- **Component fiber system** for per-component state tracking
 - Hook system for state and effects
 - Component rendering and re-rendering
 - Event delegation
 
+### Component Fiber System
+
+The library uses a component fiber system (similar to React's fiber architecture) to track state per component instance rather than globally. This ensures that:
+
+- Hook state is isolated per component
+- Conditional component rendering doesn't break hook order
+- Multiple instances of the same component maintain separate state
+- Effects are properly scoped to their components
+
 ## Project Structure
 
 ```
-├── mini-react.js    # Core library implementation
-├── index.js         # Example application
-├── index.html       # HTML entry point
-├── package.json     # Project configuration
-└── README.md        # This file
+├── last.js                    # Core library implementation
+├── test-conditional.js        # Working conditional component rendering test
+├── test-broken-conditional.js # Broken conditional hook calls test
+├── index.js                   # Original example application
+├── index.html                 # HTML entry point
+├── package.json               # Project configuration
+└── README.md                  # This file
 ``` 
 
+## Key Improvements
+
+### Conditional Rendering Fix
+
+The original implementation had a critical flaw where global hook state tracking would break with conditional component rendering:
+
+```javascript
+function ParentComponent({ showChild }) {
+  const [parentState, setParentState] = useState(0);
+  
+  return (
+    <div>
+      <p>Parent: {parentState}</p>
+      {showChild && <ChildComponent />}  // This would break with global hooks
+    </div>
+  );
+}
+
+function ChildComponent() {
+  const [childState, setChildState] = useState('child');  // Hook order changes!
+  return <p>Child: {childState}</p>;
+}
+```
+
+With the new per-component fiber system, each component instance maintains its own hook state, preventing this issue.
+
+### Important Distinction: Conditional Hooks vs Conditional Components
+
+**❌ BROKEN - Conditional Hook Calls (Cannot be fixed):**
+```javascript
+function BrokenComponent({ showExtra }) {
+  const [count, setCount] = useState(0);
+  
+  if (showExtra) {
+    const [extra, setExtra] = useState('extra');  // Conditional hook call
+  }
+  
+  const [final, setFinal] = useState('final');  // This gets wrong state!
+}
+```
+
+**✅ FIXED - Conditional Component Rendering:**
+```javascript
+function WorkingComponent({ showChild }) {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div>
+      {showChild && <ChildComponent />}  // Conditional component - works!
+    </div>
+  );
+}
+```
+
+The fiber system only fixes the second case. The first case will always break because it violates the Rules of Hooks.
 
 ## TODO
 
-prevDOM is stored globally, should be stored on container. See other global variables and their limitations.
-createElement should support accepting function components.
-Renderer should only render if props have changed.
-SSR hooks.
-Support class components.
-Support nested web components.
-useContext()
-useCallback()
-useReducer()
-support style objects not just strings.
+- [ ] Support function components in createElement (partially implemented)
+- [ ] Optimize rendering to only update when props change
+- [ ] Add SSR support
+- [ ] Support class components
+- [ ] Support nested web components
+- [ ] Add useContext() hook
+- [ ] Add useCallback() hook
+- [ ] Add useReducer() hook
+- [ ] Support style objects (not just strings)
+- [ ] Add key prop support for efficient list rendering
+- [ ] Improve component fiber reuse and cleanup
+
+## Questions
+
+Is it possible to do declarative data dependency specification in NextJS?
