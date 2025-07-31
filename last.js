@@ -29,7 +29,7 @@ class ComponentFiber {
     this.hookIndex = 0;        // Current hook index for this component
     this.dom = null;           // Associated DOM element
     this.children = [];        // Child fibers
-    this.parent = null;        // Parent fiber
+    this.parent = null;        // Parent fiber reference used for traversing up the fiber tree during cleanup and unmounting
   }
   
   /**
@@ -79,6 +79,8 @@ export function createElement(type, props, ...children) {
     props: {
       ...props,
       // Flatten children array and filter out null/undefined values
+      // flat() flattens nested arrays into a single level array
+      // e.g. [1, [2, 3], [4, [5]]] becomes [1, 2, 3, 4, 5]
       children: children.flat().filter(child => child != null)
     }
   };
@@ -232,8 +234,11 @@ function updateDom(parent, newNode, oldNode, index = 0) {
  */
 function changed(node1, node2) {
   return (
+    // Different types (string vs object)
     typeof node1 !== typeof node2 ||
+    // If both are primitive values (string/number), compare directly
     (typeof node1 === 'string' && node1 !== node2) ||
+    // If both are objects, compare their component types
     node1.type !== node2.type
   );
 }
@@ -293,6 +298,9 @@ function rerender() {
   // Set root fiber as current for hook tracking
   currentFiber = rootFiber;
   
+  // Reset hook index for the root fiber before re-rendering
+  rootFiber.resetHooks();
+
   // Generate new virtual DOM
   const vdom = rootFiber.component(rootFiber.props);
   
