@@ -14,6 +14,8 @@ const NODE_TYPE = 0;
 const PROPS = 1;
 const CHILDREN = 2;
 const STATE = 3;
+const PARENT = 4;
+const CONTEXT = 5;
 
 // prevVdom is the previous virtual DOM tree.
 // It is used to diff the new virtual DOM tree with the previous one.
@@ -26,6 +28,9 @@ let stateIndex = 0;
 // currentRoot is used to track the current root container during calls to setState etc,
 // so that we can re-render.
 let currentRoot = null;
+
+// track context's created.
+let maxContextIndex = 0;
 
 // RootContainer is the entry point for the library.
 // It is responsible for rendering the component to the container.
@@ -57,11 +62,11 @@ class RootContainer {
 
     // renderComponent takes a component spec returned from a function component
     // and executes the function component to get a vdom spec.
-    renderComponent(component, props, prevVdom) {  
+    renderComponent(component, props, prevVdom, parentVdom) {  
         // set the global prevVdom to the prevVdom provided by the caller.
         // the caller has the prevTree because ...
         const originalPrevVdom = prevVdomGlobally;
-        prevVdomGlobally = prevVdom || [];
+        prevVdomGlobally = prevVdom || [null, {}, [], [], parentVdom, []];
 
         // reset the state index
         stateIndex = 0;
@@ -73,17 +78,18 @@ class RootContainer {
 
         // execute the component spec to get a vdom spec.
         // during execution, the component can access the previous state via useState (i.e prevVdom).
-        const vdom = component(props);
+        const vdom = component(props|| {});
 
         // copy the state from the prevVdom to the new vdom.
         vdom[STATE] = prevVdomGlobally[STATE];
+        vdom[CONTEXT] = prevVdomGlobally[CONTEXT];
+
+        // set the parent of the vdom to the current component.
+        vdom[PARENT] = parentVdom;
 
         // do some basic sanity checks on the vdom spec.
         if (vdom[NODE_TYPE] === undefined) {
             throw new Error('vdom spec must have a node type');
-        }
-        if (vdom[PROPS] === undefined) {
-            throw new Error('vdom spec must have props');
         }
         
         // the component returns a vdom spec.
@@ -92,7 +98,12 @@ class RootContainer {
         // if the element is a function component, then we need to render it.
         for (const i in (vdom[CHILDREN] || [])) {
             if (typeof vdom[CHILDREN][i][NODE_TYPE] === 'function') {
-                vdom[CHILDREN][i] = this.renderComponent(vdom[CHILDREN][i][NODE_TYPE], vdom[CHILDREN][i][PROPS], prevVdom ? prevVdom[CHILDREN][i] : null);
+                vdom[CHILDREN][i] = this.renderComponent(
+                    vdom[CHILDREN][i][NODE_TYPE], 
+                    { ...vdom[CHILDREN][i][PROPS], children: vdom[CHILDREN][i][CHILDREN] },
+                    prevVdom ? prevVdom[CHILDREN][i] : null,
+                    vdom
+                );
             }
         }
 
@@ -217,4 +228,34 @@ export function useState(initialValue) {
     stateIndex++;
 
     return [prevVdomPointer[STATE][stateIndexPointer], setState];
+}
+
+export function createContext() {
+    maxContextIndex++;
+    
+    return {
+        index: maxContextIndex - 1,
+        Provider: ({ value, children }) => {
+            prevVdomGlobally[CONTEXT][maxContextIndex - 1] = value;
+            
+            return ['div',, children];
+        }
+    };
+}
+
+export function useContext(context) {
+    // traverse the parent vdom tree to find the matching context value.
+    let vdom = prevVdomGlobally;
+    while (vdom !== null || typeof vdom !== 'undefined') {
+        if (vdom[CONTEXT] && vdom[CONTEXT][context.index] !== undefined) {
+            break;
+        }
+        vdom = vdom[PARENT];
+    }
+
+    if (vdom === null) {
+        throw new Error('useContext did not find a provider for context');
+    }
+
+    return vdom[CONTEXT][context.index];
 }

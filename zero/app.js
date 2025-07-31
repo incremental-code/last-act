@@ -1,20 +1,36 @@
-import { createRoot, useState } from './last.js';
+import { useState, createContext, useContext } from './last.js';
+import { div, span, button, h1 } from './html.js';
 
-const App = () => {
+const lightTheme = `background-color: white; color: black;`;
+const darkTheme = `background-color: black; color: white;`;
+
+const ThemeContext = createContext(lightTheme);
+
+export const App = () => {
     const [count, setCount] = useState(0)
 
-    return ['div', null, [
-        ['span', null, count],
-        [Button, { setCount, count }]
+    return [div,, [
+        [ThemeContext.Provider, { value: darkTheme }, [
+            [Header, null, 'Example App'],
+            [span,, count],
+            [Button, { setCount, count }]
+        ]],
+        [ThemeContext.Provider, { value: lightTheme }, [
+            [Header, null, 'Example App'],
+            [span,, count],
+            [Button, { setCount, count }]
+        ]]
+    ]]
+}
+
+const Header = ({ children }) => {
+    const theme = useContext(ThemeContext);
+    return [div, { style: theme}, [
+        [h1, null, children]
     ]]
 }
 
 const Button = ({ setCount, count }) => {
-    return ['button', { onClick: () => setCount(count + 1) }, 'Increment to ' + (count + 1)]
+    return [button, { onClick: () => setCount(count + 1) }, `Increment to ${count + 1}`]
 }
 
-const rootOne = createRoot(document.querySelector('#root-one'));
-const rootTwo = createRoot(document.querySelector('#root-two'));
-
-rootOne.render(App, {});
-rootTwo.render(App, {});
