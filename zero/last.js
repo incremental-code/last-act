@@ -107,22 +107,41 @@ class RootContainer {
         // the vdom spec is an array of elements.
         // the elements can be function components or primitive values.
         // if the element is a function component, then we need to render it.
-        for (const i in (vdom[CHILDREN] || [])) {
-            if (!vdom[CHILDREN][i]) continue;
-            if (typeof vdom[CHILDREN][i][NODE_TYPE] === 'function') {
-                vdom[CHILDREN][i] = this.renderComponent(
-                    vdom[CHILDREN][i][NODE_TYPE], 
-                    { ...vdom[CHILDREN][i][PROPS], children: vdom[CHILDREN][i][CHILDREN] },
-                    getPrevVdomInChildren(prevVdom, vdom[CHILDREN][i], i),
-                    vdom
-                );
-            }
-        }
+        // we pass componentVdom (the component's root) as parentVdom so that
+        // context traversal via PARENT always reaches a vdom with CONTEXT set,
+        // even when function components are nested inside plain HTML elements.
+        this.processVdomChildren(vdom, prevVdom, vdom);
 
         // restore preVdom
         prevVdomGlobally = originalPrevVdom;
 
         return vdom;
+    }
+
+    // processVdomChildren recursively processes all children of a vdom node,
+    // rendering any function components it finds at any depth of nesting inside
+    // plain HTML element children. componentVdom is the root vdom of the
+    // component currently being rendered; it is kept constant as we descend
+    // through HTML elements so that PARENT always points to a vdom that has
+    // CONTEXT set, enabling correct context traversal.
+    processVdomChildren(vdom, prevVdom, componentVdom) {
+        for (const i in (vdom[CHILDREN] || [])) {
+            if (!vdom[CHILDREN][i]) continue;
+            const child = vdom[CHILDREN][i];
+            if (typeof child[NODE_TYPE] === 'function') {
+                vdom[CHILDREN][i] = this.renderComponent(
+                    child[NODE_TYPE],
+                    { ...child[PROPS], children: child[CHILDREN] },
+                    getPrevVdomInChildren(prevVdom, child, i),
+                    componentVdom
+                );
+            } else if (child[CHILDREN] instanceof Array) {
+                // Recurse into plain HTML element children to find nested
+                // function components (e.g. ListItem inside a <ul>).
+                const prevChild = prevVdom ? (prevVdom[CHILDREN]?.[i] ?? null) : null;
+                this.processVdomChildren(child, prevChild, componentVdom);
+            }
+        }
     }
 
     diff(prevVdom, vdom, prevNode) {
