@@ -108,7 +108,7 @@ class RootContainer {
         // the elements can be function components or primitive values.
         // if the element is a function component, then we need to render it.
         for (const i in (vdom[CHILDREN] || [])) {
-            // TODO: support null children, which are used to maintain order when rendering conditionaally
+            if (!vdom[CHILDREN][i]) continue;
             if (typeof vdom[CHILDREN][i][NODE_TYPE] === 'function') {
                 vdom[CHILDREN][i] = this.renderComponent(
                     vdom[CHILDREN][i][NODE_TYPE], 
@@ -166,6 +166,7 @@ class RootContainer {
 
         if (vdom[CHILDREN] instanceof Array) {
             for (const child of vdom[CHILDREN]) {
+                if (!child) continue;
                 dom.appendChild(this.createDom(child));
             }
         } else {
@@ -190,9 +191,23 @@ class RootContainer {
 
         // update the children of the node.
         if (vdom[CHILDREN] instanceof Array) {
+            let domIndex = 0;
             for (let i = 0; i < vdom[CHILDREN].length; i++) {
                 const child = vdom[CHILDREN][i];
-                this.diff(prevVdom[CHILDREN][i], child, prevNode.children[i]);
+                const prevChild = prevVdom[CHILDREN]?.[i];
+                if (!child && !prevChild) {
+                    // both falsy, nothing to do
+                } else if (!child && prevChild) {
+                    // became falsy: remove the DOM node
+                    prevNode.removeChild(prevNode.children[domIndex]);
+                } else if (child && !prevChild) {
+                    // became non-falsy: insert a new DOM node
+                    prevNode.insertBefore(this.createDom(child), prevNode.children[domIndex] ?? null);
+                    domIndex++;
+                } else {
+                    this.diff(prevChild, child, prevNode.children[domIndex]);
+                    domIndex++;
+                }
             }
         } else {
             prevNode.textContent = vdom[CHILDREN].toString();
