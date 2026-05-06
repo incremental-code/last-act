@@ -1,5 +1,5 @@
 import { useState, createContext, useContext } from './last.js';
-import { div, span, button, h1 } from './html.js';
+import { div, span, button, h1, h2, h3, p, ul, li } from './html.js';
 
 const lightTheme = `background-color: white; color: black;`;
 const darkTheme = `background-color: black; color: white;`;
@@ -16,7 +16,9 @@ export const App = () => {
             [span,, count],
             [Button, { setCount, count }],
             [ThemeChanger, { theme: lightTheme, setTheme }],
-            [ThemeChanger, { theme: darkTheme, setTheme }]
+            [ThemeChanger, { theme: darkTheme, setTheme }],
+            [ConditionalDemo],
+            [KeyedListDemo],
         ]]
     ]]
 }
@@ -38,3 +40,63 @@ const ThemeChanger = ({ theme, setTheme }) => {
 
     return [button, { onClick: () => setTheme(currentTheme === lightTheme ? darkTheme : lightTheme) }, `Change to ${currentTheme === lightTheme ? 'dark' : 'light'} theme`]
 }
+
+// ── Demo 1: Conditional rendering ────────────────────────────────────────────
+// Shows that a conditionally rendered component keeps its own state when it
+// reappears, and that the sibling component after it is unaffected.
+
+const ConditionalCounter = () => {
+    const [n, setN] = useState(0);
+    return [div, { style: 'padding:8px; background:#e8f4fd; border-radius:4px; margin:4px 0' }, [
+        [span,, `Conditional count: ${n}  `],
+        [button, { onClick: () => setN(n + 1) }, '+1'],
+    ]];
+};
+
+const StableCounter = () => {
+    const [n, setN] = useState(0);
+    return [div, { style: 'padding:8px; background:#f0fdf4; border-radius:4px; margin:4px 0' }, [
+        [span,, `Stable count: ${n}  `],
+        [button, { onClick: () => setN(n + 1) }, '+1'],
+    ]];
+};
+
+const ConditionalDemo = () => {
+    const [show, setShow] = useState(true);
+    return [div, { style: 'margin:16px 0; padding:12px; border:1px solid #ccc; border-radius:6px' }, [
+        [h2,, 'Demo 1 — Conditional rendering'],
+        [p,, 'The blue counter is conditionally rendered. Hide it, increment the green counter, then show it again — the blue counter resumes from where it left off, and the green counter is unaffected.'],
+        // null placeholder keeps sibling index stable when ConditionalCounter is hidden
+        show ? [ConditionalCounter] : null,
+        [StableCounter],
+        [button, { onClick: () => setShow(!show) }, show ? 'Hide' : 'Show'],
+    ]];
+};
+
+// ── Demo 2: Key-based list matching ──────────────────────────────────────────
+// Shows that components matched by key carry their state even when the list
+// is reordered.
+
+const ListItem = ({ label }) => {
+    const [n, setN] = useState(0);
+    return [li, { style: 'margin:4px 0' }, [
+        [span,, `${label}: clicked ${n} times  `],
+        [button, { onClick: () => setN(n + 1) }, '+1'],
+    ]];
+};
+
+const KeyedListDemo = () => {
+    const [reversed, setReversed] = useState(false);
+    const items = [
+        { key: 'a', label: 'Item A' },
+        { key: 'b', label: 'Item B' },
+        { key: 'c', label: 'Item C' },
+    ];
+    const ordered = reversed ? [...items].reverse() : items;
+    return [div, { style: 'margin:16px 0; padding:12px; border:1px solid #ccc; border-radius:6px' }, [
+        [h2,, 'Demo 2 — Key-based list matching'],
+        [p,, 'Increment some counters, then reverse the list. Each item keeps its own count because components are matched by key.'],
+        [ul,, ordered.map(({ key, label }) => [ListItem, { key, label }])],
+        [button, { onClick: () => setReversed(!reversed) }, 'Reverse list'],
+    ]];
+};
