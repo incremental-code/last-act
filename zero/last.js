@@ -32,6 +32,17 @@ let currentRoot = null;
 // track context's created.
 let maxContextIndex = 0;
 
+// getPrevVdomInChildren finds the matching previous vdom for a child component.
+// It matches by key prop if present, otherwise falls back to positional index.
+function getPrevVdomInChildren(prevVdom, currentChild, index) {
+    if (!prevVdom || !prevVdom[CHILDREN]) return null;
+    const key = currentChild[PROPS]?.key;
+    if (key !== undefined) {
+        return prevVdom[CHILDREN].find(c => c && c[PROPS]?.key === key) ?? null;
+    }
+    return prevVdom[CHILDREN][index] ?? null;
+}
+
 // RootContainer is the entry point for the library.
 // It is responsible for rendering the component to the container.
 class RootContainer {
@@ -97,11 +108,12 @@ class RootContainer {
         // the elements can be function components or primitive values.
         // if the element is a function component, then we need to render it.
         for (const i in (vdom[CHILDREN] || [])) {
+            // TODO: support null children, which are used to maintain order when rendering conditionaally
             if (typeof vdom[CHILDREN][i][NODE_TYPE] === 'function') {
                 vdom[CHILDREN][i] = this.renderComponent(
                     vdom[CHILDREN][i][NODE_TYPE], 
                     { ...vdom[CHILDREN][i][PROPS], children: vdom[CHILDREN][i][CHILDREN] },
-                    prevVdom ? prevVdom[CHILDREN][i] : null,
+                    getPrevVdomInChildren(prevVdom, vdom[CHILDREN][i], i),
                     vdom
                 );
             }
