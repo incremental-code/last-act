@@ -1,3 +1,14 @@
+/**
+ * Demo app exercising every feature of LastJS (see last.js).
+ *
+ * Layout: <App> holds a counter + theme in useState, publishes the theme through
+ * a context Provider, and renders three self-contained demos below it:
+ *   Demo 1 — conditional rendering keeps a hidden component's state
+ *   Demo 2 — keyed list items keep their state across a reorder
+ *   Demo 3 — useEffect with a setInterval and a cleanup function
+ * Components are plain functions returning createElement(...) trees; hooks
+ * (useState/useEffect/useContext) are called unconditionally at the top of each.
+ */
 import { createElement, useState, useEffect, createContext, useContext } from './last.js';
 import { div, span, button, h1, h2, p, ul, li } from './html.js';
 
