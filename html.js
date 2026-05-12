@@ -7,3 +7,6 @@ export const h3 = 'h3';
 export const p = 'p';
 export const ul = 'ul';
 export const li = 'li';
+export const input = 'input';
+export const label = 'label';
+export const section = 'section';

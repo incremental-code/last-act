@@ -1,79 +1,71 @@
 # LastJS
 
-This repo currently contains **two React-like implementations**. The active, current implementation lives in **`zero\`**. The root-level files are kept as a **reference implementation** for comparison and parity work.
-
-## Canonical implementation
-
-`index.html` boots `zero\index.js`, which renders the current demo app from `zero\app.js`.
-
-The canonical `zero\` implementation currently demonstrates:
-
-- `useState`
-- `createContext` / `useContext`
-- stable conditional rendering with falsy child slots
-- key-based child matching
-- recursive rendering of function components nested inside HTML elements
-- a `createRoot(...).render(...)` API
+A minimal functional reactive UI library. Components return plain array specs; state and effects persist across renders in the vdom tree.
 
 ## Getting started
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Start the development server:
-   ```bash
-   npm start
-   ```
-3. Open `http://localhost:3000`
+```bash
+npm install
+npm start         # serves on http://localhost:3000
+```
+
+## Authoring model
+
+Components are plain functions that return a `[nodeType, props, children]` tuple:
+
+```js
+const Counter = () => {
+    const [n, setN] = useState(0);
+    return ['button', { onClick: () => setN(n + 1) }, `Clicked ${n} times`];
+};
+```
+
+String constants for HTML element names can be imported from `html.js`:
+
+```js
+import { div, button, span } from './html.js';
+```
+
+Entry point:
+
+```js
+import { createRoot } from './last.js';
+createRoot(document.querySelector('#root')).render(App, {});
+```
+
+## API
+
+| Export | Description |
+| --- | --- |
+| `createRoot(container)` | Returns a `RootContainer` with a `.render(Component, props)` method |
+| `render(Component, container, props)` | Convenience wrapper around `createRoot` |
+| `useState(initialValue)` | Returns `[value, setState]`; setState accepts a value or updater function |
+| `useEffect(fn, deps)` | Runs `fn` after render when `deps` change; `fn` may return a cleanup function |
+| `createContext()` | Returns `{ Provider, index }` |
+| `useContext(context)` | Reads the nearest provider value for `context` |
+
+## Demo app (`app.js`)
+
+The demo covers:
+
+- `useState` — counter, theme toggle
+- `createContext` / `useContext` — theme passed via context
+- **Demo 1** — stable conditional rendering with falsy child slots
+- **Demo 2** — key-based child matching for reordered lists
+- **Demo 3** — `useEffect` with `setInterval` and cleanup
+
+## Hook rules
+
+- Call hooks unconditionally at the top level of a component.
+- **Conditional component rendering is fine** — a component can be omitted from the tree and will resume its state when it reappears (see Demo 1).
+- **Conditional hook calls inside one component are not valid** — the hook index must be stable across renders.
 
 ## Repo layout
 
-| Path | Status | Purpose |
-| --- | --- | --- |
-| `zero\` | Canonical | Current implementation and demo app |
-| `index.html` | Canonical entry | Loads `zero\index.js` |
-| `last.js` | Reference | Older object-based virtual DOM implementation |
-| `index.js` | Reference | Older demo entry point for the root implementation |
-| `test-conditional.js` | Reference | Older conditional component rendering demo |
-| `test-broken-conditional.js` | Reference | Older demo showing broken conditional hook calls |
-| `components\` | Reference | Demo components for the root implementation |
-
-## Functional differences between implementations
-
-| Area | Root implementation | `zero\` implementation |
-| --- | --- | --- |
-| Authoring model | `createElement(type, props, ...children)` returns object-shaped VDOM | array/tuple VDOM specs like `[div, props, children]` |
-| Entry point | `render(Component, container)` | `createRoot(container).render(Component, props)` and `render(...)` |
-| Hooks | `useState`, `useEffect` | `useState`, `createContext`, `useContext` |
-| Context | Not implemented | Implemented |
-| Conditional rendering | Demonstrated via `test-conditional.js` | Supported with stable falsy child handling |
-| Keyed children | Not implemented | Implemented via `key` matching in child reconciliation |
-| Nested function components under HTML nodes | Limited in the older code path | Explicit recursive processing via `processVdomChildren(...)` |
-| DOM/event updates | More selective prop and event updates | Simpler updates; event listeners are currently reattached on every update |
-| Demo coverage | `useEffect`, `createElement`, conditional rendering examples | context, conditional rendering, keyed list matching |
-
-## Current direction
-
-The `zero\` implementation is the code path to extend. The root implementation is still useful because it documents behavior and APIs that may be worth carrying forward, especially:
-
-- `createElement(...)` authoring
-- `useEffect(...)`
-- the older demo scenarios around conditional rendering and hook behavior
-
-## Parity roadmap
-
-- [ ] Decide whether the canonical API should stay array-spec only or gain a compatibility layer/helper similar to `createElement(...)`
-- [ ] Add an effect hook story to `zero\` (`useEffect` or an equivalent API)
-- [ ] Port the more selective prop/event update behavior from the root implementation into `zero\last.js`
-- [ ] Recreate or migrate the useful root demo scenarios under the canonical `zero\` app
-- [ ] Remove or archive root-level reference files once the remaining useful behavior is either ported or intentionally dropped
-
-## Notes on hook behavior
-
-The older reference demos are still useful for one important distinction:
-
-- **Conditional component rendering can be supported**
-- **Conditional hook calls inside the same component are still invalid**
-
-That distinction should remain documented even if the older demo files are eventually retired.
+| Path | Purpose |
+| --- | --- |
+| `last.js` | Core library |
+| `app.js` | Demo application |
+| `html.js` | String constants for HTML element names |
+| `index.js` | Entry point |
+| `index.html` | HTML shell |
