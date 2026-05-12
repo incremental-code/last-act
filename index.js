@@ -1,4 +1,5 @@
-import { render } from './last.js';
-import Counter from './components/Counter.js';
+import { createRoot } from './last.js';
+import { App } from './app.js';
 
-render(Counter, document.getElementById('root'));
+const root = createRoot(document.querySelector('#root'));
+root.render(App, {});

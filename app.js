@@ -1,5 +1,5 @@
-import { useState, createContext, useContext } from './last.js';
-import { div, span, button, h1, h2, h3, p, ul, li } from './html.js';
+import { useState, useEffect, createContext, useContext } from './last.js';
+import { div, span, button, h1, h2, p, ul, li } from './html.js';
 
 const lightTheme = `background-color: white; color: black;`;
 const darkTheme = `background-color: black; color: white;`;
@@ -7,8 +7,12 @@ const darkTheme = `background-color: black; color: white;`;
 const ThemeContext = createContext(lightTheme);
 
 export const App = () => {
-    const [count, setCount] = useState(0)
+    const [count, setCount] = useState(0);
     const [theme, setTheme] = useState(lightTheme);
+
+    useEffect(() => {
+        document.title = `LastJS — count: ${count}`;
+    }, [count]);
 
     return [div,, [
         [ThemeContext.Provider, { value: theme }, [
@@ -19,27 +23,26 @@ export const App = () => {
             [ThemeChanger, { theme: darkTheme, setTheme }],
             [ConditionalDemo],
             [KeyedListDemo],
+            [EffectDemo],
         ]]
-    ]]
-}
+    ]];
+};
 
 const Header = ({ children }) => {
     const theme = useContext(ThemeContext);
-
     return [div, { style: theme }, [
         [h1, null, children]
-    ]]
-}
+    ]];
+};
 
 const Button = ({ setCount, count }) => {
-    return [button, { onClick: () => setCount(count + 1) }, `Increment to ${count + 1}`]
-}
+    return [button, { onClick: () => setCount(count + 1) }, `Increment to ${count + 1}`];
+};
 
 const ThemeChanger = ({ theme, setTheme }) => {
     const currentTheme = useContext(ThemeContext);
-
-    return [button, { onClick: () => setTheme(currentTheme === lightTheme ? darkTheme : lightTheme) }, `Change to ${currentTheme === lightTheme ? 'dark' : 'light'} theme`]
-}
+    return [button, { onClick: () => setTheme(currentTheme === lightTheme ? darkTheme : lightTheme) }, `Change to ${currentTheme === lightTheme ? 'dark' : 'light'} theme`];
+};
 
 // ── Demo 1: Conditional rendering ────────────────────────────────────────────
 // Shows that a conditionally rendered component keeps its own state when it
@@ -98,5 +101,35 @@ const KeyedListDemo = () => {
         [p,, 'Increment some counters, then reverse the list. Each item keeps its own count because components are matched by key.'],
         [ul,, ordered.map(({ key, label }) => [ListItem, { key, label }])],
         [button, { onClick: () => setReversed(!reversed) }, 'Reverse list'],
+    ]];
+};
+
+// ── Demo 3: useEffect with cleanup ───────────────────────────────────────────
+// Shows useEffect running on mount (empty deps), on every dep change, and
+// cleaning up a setInterval when the effect re-runs or the component unmounts.
+
+const EffectDemo = () => {
+    const [running, setRunning] = useState(false);
+    const [seconds, setSeconds] = useState(0);
+    const [log, setLog] = useState('(not started)');
+
+    // Runs whenever `running` changes; cleans up the interval on each re-run.
+    useEffect(() => {
+        if (!running) return;
+        const id = setInterval(() => setSeconds(s => s + 1), 1000);
+        setLog('interval started');
+        return () => {
+            clearInterval(id);
+            setLog('interval cleared');
+        };
+    }, [running]);
+
+    return [div, { style: 'margin:16px 0; padding:12px; border:1px solid #ccc; border-radius:6px' }, [
+        [h2,, 'Demo 3 — useEffect with cleanup'],
+        [p,, 'A setInterval is started when the timer runs and cleared when it pauses. The cleanup function fires before each re-run and on unmount.'],
+        [p,, `Elapsed: ${seconds}s`],
+        [p,, `Effect log: ${log}`],
+        [button, { onClick: () => setRunning(!running) }, running ? 'Pause' : 'Start'],
+        [button, { onClick: () => { setRunning(false); setSeconds(0); } }, 'Reset'],
     ]];
 };
