@@ -1,8 +1,8 @@
-import { useState, useEffect, createContext, useContext } from './last.js';
+import { createElement, useState, useEffect, createContext, useContext } from './last.js';
 import { div, span, button, h1, h2, p, ul, li } from './html.js';
 
 const lightTheme = `background-color: white; color: black;`;
-const darkTheme = `background-color: black; color: white;`;
+const darkTheme  = `background-color: black; color: white;`;
 
 const ThemeContext = createContext(lightTheme);
 
@@ -14,34 +14,37 @@ export const App = () => {
         document.title = `LastJS — count: ${count}`;
     }, [count]);
 
-    return [div,, [
-        [ThemeContext.Provider, { value: theme }, [
-            [Header, null, 'Example App'],
-            [span,, count],
-            [Button, { setCount, count }],
-            [ThemeChanger, { theme: lightTheme, setTheme }],
-            [ThemeChanger, { theme: darkTheme, setTheme }],
-            [ConditionalDemo],
-            [KeyedListDemo],
-            [EffectDemo],
-        ]]
-    ]];
+    return createElement(div, null,
+        createElement(ThemeContext.Provider, { value: theme },
+            createElement(Header, null, 'Example App'),
+            createElement(span, null, count),
+            createElement(Button, { setCount, count }),
+            createElement(ThemeChanger, { theme: lightTheme, setTheme }),
+            createElement(ThemeChanger, { theme: darkTheme,  setTheme }),
+            createElement(ConditionalDemo),
+            createElement(KeyedListDemo),
+            createElement(EffectDemo),
+        )
+    );
 };
 
 const Header = ({ children }) => {
     const theme = useContext(ThemeContext);
-    return [div, { style: theme }, [
-        [h1, null, children]
-    ]];
+    return createElement(div, { style: theme },
+        createElement(h1, null, children)
+    );
 };
 
-const Button = ({ setCount, count }) => {
-    return [button, { onClick: () => setCount(count + 1) }, `Increment to ${count + 1}`];
-};
+const Button = ({ setCount, count }) =>
+    createElement(button, { onClick: () => setCount(count + 1) }, `Increment to ${count + 1}`);
 
 const ThemeChanger = ({ theme, setTheme }) => {
     const currentTheme = useContext(ThemeContext);
-    return [button, { onClick: () => setTheme(currentTheme === lightTheme ? darkTheme : lightTheme) }, `Change to ${currentTheme === lightTheme ? 'dark' : 'light'} theme`];
+    const next = currentTheme === lightTheme ? 'dark' : 'light';
+    return createElement(button,
+        { onClick: () => setTheme(currentTheme === lightTheme ? darkTheme : lightTheme) },
+        `Change to ${next} theme`
+    );
 };
 
 // ── Demo 1: Conditional rendering ────────────────────────────────────────────
@@ -50,30 +53,33 @@ const ThemeChanger = ({ theme, setTheme }) => {
 
 const ConditionalCounter = () => {
     const [n, setN] = useState(0);
-    return [div, { style: 'padding:8px; background:#e8f4fd; border-radius:4px; margin:4px 0' }, [
-        [span,, `Conditional count: ${n}  `],
-        [button, { onClick: () => setN(n + 1) }, '+1'],
-    ]];
+    return createElement(div, { style: 'padding:8px; background:#e8f4fd; border-radius:4px; margin:4px 0' },
+        createElement(span, null, `Conditional count: ${n}  `),
+        createElement(button, { onClick: () => setN(n + 1) }, '+1'),
+    );
 };
 
 const StableCounter = () => {
     const [n, setN] = useState(0);
-    return [div, { style: 'padding:8px; background:#f0fdf4; border-radius:4px; margin:4px 0' }, [
-        [span,, `Stable count: ${n}  `],
-        [button, { onClick: () => setN(n + 1) }, '+1'],
-    ]];
+    return createElement(div, { style: 'padding:8px; background:#f0fdf4; border-radius:4px; margin:4px 0' },
+        createElement(span, null, `Stable count: ${n}  `),
+        createElement(button, { onClick: () => setN(n + 1) }, '+1'),
+    );
 };
 
 const ConditionalDemo = () => {
     const [show, setShow] = useState(true);
-    return [div, { style: 'margin:16px 0; padding:12px; border:1px solid #ccc; border-radius:6px' }, [
-        [h2,, 'Demo 1 — Conditional rendering'],
-        [p,, 'The blue counter is conditionally rendered. Hide it, increment the green counter, then show it again — the blue counter resumes from where it left off, and the green counter is unaffected.'],
+    return createElement(div, { style: 'margin:16px 0; padding:12px; border:1px solid #ccc; border-radius:6px' },
+        createElement(h2, null, 'Demo 1 — Conditional rendering'),
+        createElement(p, null,
+            'The blue counter is conditionally rendered. Hide it, increment the green counter, ' +
+            'then show it again — the blue counter resumes from where it left off, and the green counter is unaffected.'
+        ),
         // null placeholder keeps sibling index stable when ConditionalCounter is hidden
-        show ? [ConditionalCounter] : null,
-        [StableCounter],
-        [button, { onClick: () => setShow(!show) }, show ? 'Hide' : 'Show'],
-    ]];
+        show ? createElement(ConditionalCounter) : null,
+        createElement(StableCounter),
+        createElement(button, { onClick: () => setShow(!show) }, show ? 'Hide' : 'Show'),
+    );
 };
 
 // ── Demo 2: Key-based list matching ──────────────────────────────────────────
@@ -82,10 +88,10 @@ const ConditionalDemo = () => {
 
 const ListItem = ({ label }) => {
     const [n, setN] = useState(0);
-    return [li, { style: 'margin:4px 0' }, [
-        [span,, `${label}: clicked ${n} times  `],
-        [button, { onClick: () => setN(n + 1) }, '+1'],
-    ]];
+    return createElement(li, { style: 'margin:4px 0' },
+        createElement(span, null, `${label}: clicked ${n} times  `),
+        createElement(button, { onClick: () => setN(n + 1) }, '+1'),
+    );
 };
 
 const KeyedListDemo = () => {
@@ -96,12 +102,15 @@ const KeyedListDemo = () => {
         { key: 'c', label: 'Item C' },
     ];
     const ordered = reversed ? [...items].reverse() : items;
-    return [div, { style: 'margin:16px 0; padding:12px; border:1px solid #ccc; border-radius:6px' }, [
-        [h2,, 'Demo 2 — Key-based list matching'],
-        [p,, 'Increment some counters, then reverse the list. Each item keeps its own count because components are matched by key.'],
-        [ul,, ordered.map(({ key, label }) => [ListItem, { key, label }])],
-        [button, { onClick: () => setReversed(!reversed) }, 'Reverse list'],
-    ]];
+    return createElement(div, { style: 'margin:16px 0; padding:12px; border:1px solid #ccc; border-radius:6px' },
+        createElement(h2, null, 'Demo 2 — Key-based list matching'),
+        createElement(p, null,
+            'Increment some counters, then reverse the list. ' +
+            'Each item keeps its own count because components are matched by key.'
+        ),
+        createElement(ul, null, ordered.map(({ key, label }) => createElement(ListItem, { key, label }))),
+        createElement(button, { onClick: () => setReversed(!reversed) }, 'Reverse list'),
+    );
 };
 
 // ── Demo 3: useEffect with cleanup ───────────────────────────────────────────
@@ -111,7 +120,7 @@ const KeyedListDemo = () => {
 const EffectDemo = () => {
     const [running, setRunning] = useState(false);
     const [seconds, setSeconds] = useState(0);
-    const [log, setLog] = useState('(not started)');
+    const [log, setLog]         = useState('(not started)');
 
     // Runs whenever `running` changes; cleans up the interval on each re-run.
     useEffect(() => {
@@ -124,12 +133,15 @@ const EffectDemo = () => {
         };
     }, [running]);
 
-    return [div, { style: 'margin:16px 0; padding:12px; border:1px solid #ccc; border-radius:6px' }, [
-        [h2,, 'Demo 3 — useEffect with cleanup'],
-        [p,, 'A setInterval is started when the timer runs and cleared when it pauses. The cleanup function fires before each re-run and on unmount.'],
-        [p,, `Elapsed: ${seconds}s`],
-        [p,, `Effect log: ${log}`],
-        [button, { onClick: () => setRunning(!running) }, running ? 'Pause' : 'Start'],
-        [button, { onClick: () => { setRunning(false); setSeconds(0); } }, 'Reset'],
-    ]];
+    return createElement(div, { style: 'margin:16px 0; padding:12px; border:1px solid #ccc; border-radius:6px' },
+        createElement(h2, null, 'Demo 3 — useEffect with cleanup'),
+        createElement(p, null,
+            'A setInterval is started when the timer runs and cleared when it pauses. ' +
+            'The cleanup function fires before each re-run and on unmount.'
+        ),
+        createElement(p, null, `Elapsed: ${seconds}s`),
+        createElement(p, null, `Effect log: ${log}`),
+        createElement(button, { onClick: () => setRunning(!running) }, running ? 'Pause' : 'Start'),
+        createElement(button, { onClick: () => { setRunning(false); setSeconds(0); } }, 'Reset'),
+    );
 };

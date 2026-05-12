@@ -1,58 +1,78 @@
 /**
  * LastJS - a customisable functional reactive user interface library.
  *
- * Components return plain array specs:  [nodeType, props, children]
- * State persists across renders in the vdom tree.
+ * Components return React-compatible element objects: { $$typeof, type, key, ref, props }
+ * Internal state persists across renders in a parallel shadow tree.
  */
 
-// vdom tuple indices
-const NODE_TYPE = 0;
-const PROPS = 1;
-const CHILDREN = 2;
-const STATE = 3;
-const PARENT = 4;
-const CONTEXT = 5;
-const EFFECTS = 6;
+const REACT_ELEMENT_TYPE = Symbol.for('react.element');
 
-// Set during component execution so that useState/useEffect/useContext can access
-// the previous vdom (and therefore previous state/effects) for the current component.
-let prevVdomGlobally = null;
-let stateIndex = 0;
+// Creates a React-compatible element descriptor.
+// Extra children args are collected into props.children; a single child is unwrapped.
+export function createElement(type, props, ...children) {
+    const { key = null, ref = null, ...rest } = props ?? {};
+    if (children.length === 1)      rest.children = children[0];
+    else if (children.length > 1)   rest.children = children;
+    return { $$typeof: REACT_ELEMENT_TYPE, type, key, ref, props: rest };
+}
+
+// ── Shadow tree ───────────────────────────────────────────────────────────────
+// A shadow node lives alongside every rendered element and carries all
+// internal bookkeeping that must not appear on the public element object.
+//
+//   state    — useState slots for this component position
+//   effects  — useEffect slots for this component position
+//   context  — context values set by a Provider at this position
+//   parent   — enclosing component shadow (skips host elements; used by useContext)
+//   children — shadow children parallel to the rendered element's props.children
+//   _key     — copy of element.key for key-based child matching
+
+function makeShadow(key, parent) {
+    return { _key: key, state: [], effects: [], context: [], parent, children: [] };
+}
+
+// Returns the previous child shadow for position i, preferring key-based lookup.
+function getPrevChildShadow(prevShadow, child, index) {
+    if (!prevShadow?.children) return null;
+    if (child.key != null)
+        return prevShadow.children.find(s => s?._key === child.key) ?? null;
+    return prevShadow.children[index] ?? null;
+}
+
+// ── Hook globals ──────────────────────────────────────────────────────────────
+// Set during component execution so that useState / useEffect / useContext
+// can access the current component's shadow.
+
+let prevShadowGlobally = null;
+let stateIndex  = 0;
 let effectIndex = 0;
 
-// The RootContainer currently being rendered — used by setState to schedule rerenders.
-let currentRoot = null;
+let currentRoot       = null;   // RootContainer being rendered; used by setState
+let maxContextIndex   = 0;
+let pendingEffects    = [];     // populated during render, flushed after diff
 
-let maxContextIndex = 0;
-
-// Populated during render, flushed asynchronously after each diff.
-let pendingEffects = [];
-
-// Returns the previous vdom for a child, matching by key if present.
-function getPrevVdomInChildren(prevVdom, currentChild, index) {
-    if (!prevVdom || !prevVdom[CHILDREN]) return null;
-    const key = currentChild[PROPS]?.key;
-    if (key !== undefined) {
-        return prevVdom[CHILDREN].find(c => c && c[PROPS]?.key === key) ?? null;
-    }
-    return prevVdom[CHILDREN][index] ?? null;
-}
+// ── RootContainer ─────────────────────────────────────────────────────────────
 
 class RootContainer {
     constructor(container) {
-        this.container = container;
-        this.prevVdom = null;
+        this.container   = container;
+        this.rootElement = null;  // last element passed to render()
+        this.prevElement = null;  // last resolved host-element tree
+        this.prevShadow  = null;  // last shadow tree
     }
 
-    render(component, props) {
-        currentRoot = this;
-        this.component = component;
-        this.props = props;
-        pendingEffects = [];
+    render(element) {
+        currentRoot       = this;
+        this.rootElement  = element;
+        pendingEffects    = [];
 
-        const vdom = this.renderComponent(component, props, this.prevVdom);
-        this.diff(this.prevVdom, vdom, this.container.firstChild, this.container);
-        this.prevVdom = vdom;
+        const [renderedElement, shadow] = this.renderComponent(
+            element.type, element.props, this.prevShadow, null
+        );
+
+        this.diff(this.prevElement, renderedElement, this.container.firstChild, this.container);
+        this.prevElement = renderedElement;
+        this.prevShadow  = shadow;
 
         const effectsToRun = pendingEffects;
         pendingEffects = [];
@@ -60,127 +80,143 @@ class RootContainer {
     }
 
     rerender() {
-        this.render(this.component, this.props);
+        this.render(this.rootElement);
     }
 
-    // Executes a function component, wiring up hook globals and copying state/effects
-    // from the previous vdom into the new one.
-    renderComponent(component, props, prevVdom, parentVdom) {
-        const originalPrevVdom = prevVdomGlobally;
-        prevVdomGlobally = prevVdom || [null, {}, [], [], parentVdom, [], []];
-        stateIndex = 0;
+    // Executes a function component, wiring up hook globals and building the
+    // shadow tree in parallel with the returned element tree.
+    renderComponent(type, props, prevShadow, parentShadow) {
+        const shadow = makeShadow(props?.key ?? null, parentShadow);
+        shadow.state   = prevShadow?.state   ?? [];
+        shadow.effects = prevShadow?.effects ?? [];
+        shadow.context = prevShadow?.context ?? [];
+
+        const savedPrevShadow = prevShadowGlobally;
+        prevShadowGlobally = shadow;
+        stateIndex  = 0;
         effectIndex = 0;
 
-        const vdom = component(props || {});
+        const element = type(props ?? {});
 
-        // Propagate state/effects/context arrays by reference so that setState and
-        // effect cleanup closures always operate on the live slot.
-        vdom[STATE] = prevVdomGlobally[STATE];
-        vdom[CONTEXT] = prevVdomGlobally[CONTEXT];
-        vdom[EFFECTS] = prevVdomGlobally[EFFECTS] || [];
-        vdom[PARENT] = parentVdom;
+        // Walk the host-element tree that the component returned, resolving any
+        // nested function components and mirroring the structure in shadow.children.
+        this.processChildren(element, prevShadow, shadow, shadow);
 
-        if (vdom[NODE_TYPE] === undefined) {
-            throw new Error('component must return a vdom spec with a node type');
-        }
-
-        this.processVdomChildren(vdom, prevVdom, vdom);
-
-        prevVdomGlobally = originalPrevVdom;
-        return vdom;
+        prevShadowGlobally = savedPrevShadow;
+        return [element, shadow];
     }
 
-    // Recursively processes all children of a vdom node, rendering any function
-    // components found at any depth inside plain HTML element children.
-    // componentVdom is the root vdom of the component currently being rendered;
-    // it is kept constant as we descend through HTML elements so that PARENT always
-    // points to a vdom that has CONTEXT set, enabling correct context traversal.
-    processVdomChildren(vdom, prevVdom, componentVdom) {
-        for (const i in (vdom[CHILDREN] || [])) {
-            if (!vdom[CHILDREN][i]) continue;
-            const child = vdom[CHILDREN][i];
-            if (typeof child[NODE_TYPE] === 'function') {
-                vdom[CHILDREN][i] = this.renderComponent(
-                    child[NODE_TYPE],
-                    { ...child[PROPS], children: child[CHILDREN] },
-                    getPrevVdomInChildren(prevVdom, child, i),
-                    componentVdom
+    // Recursively resolves function-component children inside a host element.
+    //
+    //   element          — host element whose children we are walking
+    //   prevHostShadow   — shadow from the previous render of this host element
+    //                      (used to find prev child shadows by index / key)
+    //   componentShadow  — enclosing component shadow; stays constant as we
+    //                      descend through host elements (used as parent for new components)
+    //   hostShadow       — new shadow for this host element; we populate its .children
+    processChildren(element, prevHostShadow, componentShadow, hostShadow) {
+        const children = element.props?.children;
+        if (!Array.isArray(children)) return;
+
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            if (!child || typeof child !== 'object') continue;
+
+            if (typeof child.type === 'function') {
+                // Function component — render it and splice the result back in.
+                const prevChildShadow = getPrevChildShadow(prevHostShadow, child, i);
+                const [rendered, childShadow] = this.renderComponent(
+                    child.type, child.props, prevChildShadow, componentShadow
                 );
-            } else if (child[CHILDREN] instanceof Array) {
-                const prevChild = prevVdom ? (prevVdom[CHILDREN]?.[i] ?? null) : null;
-                this.processVdomChildren(child, prevChild, componentVdom);
+                children[i]           = rendered;
+                hostShadow.children[i] = childShadow;
+            } else {
+                // Host element — create a shadow for it and recurse into its children.
+                const prevChildShadow = prevHostShadow?.children?.[i] ?? null;
+                const childShadow     = makeShadow(child.key ?? null, componentShadow);
+                hostShadow.children[i] = childShadow;
+                this.processChildren(child, prevChildShadow, componentShadow, childShadow);
             }
         }
     }
 
-    diff(prevVdom, vdom, prevNode, parentNode) {
-        if (prevVdom === null) {
-            parentNode.appendChild(this.createDom(vdom));
+    // ── DOM diffing ───────────────────────────────────────────────────────────
+
+    diff(prevElement, element, prevNode, parentNode) {
+        if (prevElement === null) {
+            parentNode.appendChild(this.createDom(element));
             return;
         }
-        if (prevVdom === vdom) return;
-        if (prevVdom[NODE_TYPE] !== vdom[NODE_TYPE]) {
-            parentNode.replaceChild(this.createDom(vdom), prevNode);
+        if (prevElement === element) return;
+        if (prevElement.type !== element.type) {
+            parentNode.replaceChild(this.createDom(element), prevNode);
             return;
         }
-        this.updateNode(prevNode, prevVdom, vdom);
+        this.updateNode(prevNode, prevElement, element);
     }
 
-    createDom(vdom) {
-        const dom = document.createElement(vdom[NODE_TYPE]);
-        for (const [key, value] of Object.entries(vdom[PROPS] || {})) {
+    createDom(element) {
+        const dom   = document.createElement(element.type);
+        const props = element.props ?? {};
+
+        for (const [key, value] of Object.entries(props)) {
+            if (key === 'children') continue;
             if (key.startsWith('on')) {
                 dom.addEventListener(key.slice(2).toLowerCase(), value);
-            } else if (key !== 'key') {
-                dom.setAttribute(key, value);
+            } else if (key !== 'key' && key !== 'ref') {
+                dom.setAttribute(key === 'className' ? 'class' : key, value);
             }
         }
-        if (vdom[CHILDREN] instanceof Array) {
-            for (const child of vdom[CHILDREN]) {
-                if (!child) continue;
+
+        const { children } = props;
+        if (Array.isArray(children)) {
+            for (const child of children) {
+                if (child == null) continue;
                 dom.appendChild(this.createDom(child));
             }
-        } else if (vdom[CHILDREN] != null) {
-            dom.textContent = String(vdom[CHILDREN]);
+        } else if (children != null) {
+            dom.textContent = String(children);
         }
+
         return dom;
     }
 
-    updateNode(node, prevVdom, vdom) {
-        const newProps = vdom[PROPS] || {};
-        const oldProps = prevVdom[PROPS] || {};
+    updateNode(node, prevElement, element) {
+        const oldProps = prevElement.props ?? {};
+        const newProps = element.props   ?? {};
 
-        // Remove event listeners that were removed or changed.
         for (const key of Object.keys(oldProps)) {
+            if (key === 'children') continue;
             if (key.startsWith('on')) {
-                if (!(key in newProps) || newProps[key] !== oldProps[key]) {
+                if (!(key in newProps) || newProps[key] !== oldProps[key])
                     node.removeEventListener(key.slice(2).toLowerCase(), oldProps[key]);
-                }
-            } else if (key !== 'key' && !(key in newProps)) {
-                node.removeAttribute(key);
+            } else if (key !== 'key' && key !== 'ref' && !(key in newProps)) {
+                node.removeAttribute(key === 'className' ? 'class' : key);
             }
         }
 
-        // Add new event listeners and update changed attributes.
         for (const [key, value] of Object.entries(newProps)) {
+            if (key === 'children') continue;
             if (key.startsWith('on')) {
-                if (!(key in oldProps) || value !== oldProps[key]) {
+                if (!(key in oldProps) || value !== oldProps[key])
                     node.addEventListener(key.slice(2).toLowerCase(), value);
-                }
-            } else if (key !== 'key') {
-                if (node.getAttribute(key) !== String(value)) {
-                    node.setAttribute(key, value);
-                }
+            } else if (key !== 'key' && key !== 'ref') {
+                const attr = key === 'className' ? 'class' : key;
+                if (node.getAttribute(attr) !== String(value))
+                    node.setAttribute(attr, value);
             }
         }
 
-        if (vdom[CHILDREN] instanceof Array) {
+        const newChildren = newProps.children;
+        const oldChildren = oldProps.children;
+
+        if (Array.isArray(newChildren)) {
             let domIndex = 0;
-            for (let i = 0; i < vdom[CHILDREN].length; i++) {
-                const child = vdom[CHILDREN][i];
-                const prevChild = prevVdom[CHILDREN]?.[i];
+            for (let i = 0; i < newChildren.length; i++) {
+                const child     = newChildren[i];
+                const prevChild = Array.isArray(oldChildren) ? oldChildren[i] : null;
                 if (!child && !prevChild) {
-                    // both absent — stable falsy slot, nothing to do
+                    // stable absent slot — nothing to do
                 } else if (!child && prevChild) {
                     node.removeChild(node.children[domIndex]);
                 } else if (child && !prevChild) {
@@ -191,60 +227,58 @@ class RootContainer {
                     domIndex++;
                 }
             }
-        } else if (vdom[CHILDREN] != null) {
-            node.textContent = String(vdom[CHILDREN]);
+        } else if (newChildren != null) {
+            node.textContent = String(newChildren);
         }
     }
 }
 
+// ── Effects ───────────────────────────────────────────────────────────────────
+
 function flushEffects(effects) {
-    for (const { stateRef, fn, deps } of effects) {
-        if (!stateRef.hasRun || !depsAreSame(deps, stateRef.deps)) {
-            if (stateRef.cleanup) stateRef.cleanup();
-            stateRef.cleanup = fn() ?? null;
-            stateRef.deps = deps ? [...deps] : undefined;
-            stateRef.hasRun = true;
+    for (const { slot, fn, deps } of effects) {
+        if (!slot.hasRun || !depsAreSame(deps, slot.deps)) {
+            if (slot.cleanup) slot.cleanup();
+            slot.cleanup = fn() ?? null;
+            slot.deps    = deps ? [...deps] : undefined;
+            slot.hasRun  = true;
         }
     }
 }
 
 function depsAreSame(a, b) {
-    if (!a || !b) return false;
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-        if (a[i] !== b[i]) return false;
-    }
+    if (!a || !b || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
     return true;
 }
+
+// ── Public API ────────────────────────────────────────────────────────────────
 
 export function createRoot(container) {
     return new RootContainer(container);
 }
 
-export function render(component, container, props) {
+export function render(element, container) {
     const root = new RootContainer(container);
-    root.render(component, props);
+    root.render(element);
 }
 
 export function useState(initialValue) {
-    if (currentRoot === null) throw new Error('useState can only be called inside a component');
+    if (currentRoot === null) throw new Error('useState called outside a component');
 
-    if (!prevVdomGlobally[STATE]) prevVdomGlobally[STATE] = [];
+    const rootRef   = currentRoot;
+    const shadowRef = prevShadowGlobally;
+    const idx       = stateIndex++;
 
-    const rootRef = currentRoot;
-    const vdomRef = prevVdomGlobally;
-    const idx = stateIndex++;
+    if (shadowRef.state[idx] === undefined)
+        shadowRef.state[idx] = typeof initialValue === 'function' ? initialValue() : initialValue;
 
-    if (vdomRef[STATE][idx] === undefined) {
-        vdomRef[STATE][idx] = typeof initialValue === 'function' ? initialValue() : initialValue;
-    }
-
-    const setState = (value) => {
-        vdomRef[STATE][idx] = typeof value === 'function' ? value(vdomRef[STATE][idx]) : value;
+    const setState = value => {
+        shadowRef.state[idx] = typeof value === 'function' ? value(shadowRef.state[idx]) : value;
         rootRef.rerender();
     };
 
-    return [vdomRef[STATE][idx], setState];
+    return [shadowRef.state[idx], setState];
 }
 
 // Schedules a side effect to run after the current render.
@@ -253,16 +287,13 @@ export function useState(initialValue) {
 // Passing no deps array means the effect runs after every render.
 // Passing an empty deps array means the effect runs once, on mount.
 export function useEffect(fn, deps) {
-    if (currentRoot === null) throw new Error('useEffect can only be called inside a component');
-
-    if (!prevVdomGlobally[EFFECTS]) prevVdomGlobally[EFFECTS] = [];
+    if (currentRoot === null) throw new Error('useEffect called outside a component');
 
     const idx = effectIndex++;
-    if (!prevVdomGlobally[EFFECTS][idx]) {
-        prevVdomGlobally[EFFECTS][idx] = { hasRun: false, deps: undefined, cleanup: null };
-    }
+    if (!prevShadowGlobally.effects[idx])
+        prevShadowGlobally.effects[idx] = { hasRun: false, deps: undefined, cleanup: null };
 
-    pendingEffects.push({ stateRef: prevVdomGlobally[EFFECTS][idx], fn, deps });
+    pendingEffects.push({ slot: prevShadowGlobally.effects[idx], fn, deps });
 }
 
 export function createContext() {
@@ -270,18 +301,17 @@ export function createContext() {
     return {
         index,
         Provider: ({ value, children }) => {
-            prevVdomGlobally[CONTEXT][index] = value;
-            return ['div',, children];
-        }
+            prevShadowGlobally.context[index] = value;
+            return createElement('div', null, children);
+        },
     };
 }
 
 export function useContext(context) {
-    let vdom = prevVdomGlobally;
-    while (vdom != null) {
-        if (vdom[CONTEXT] && vdom[CONTEXT][context.index] !== undefined) break;
-        vdom = vdom[PARENT];
+    let shadow = prevShadowGlobally;
+    while (shadow !== null) {
+        if (shadow.context[context.index] !== undefined) return shadow.context[context.index];
+        shadow = shadow.parent;
     }
-    if (vdom == null) throw new Error('useContext did not find a provider for context');
-    return vdom[CONTEXT][context.index];
+    throw new Error('useContext: no matching Provider found');
 }
