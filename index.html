@@ -1,10 +1,560 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>LastJS</title>
-    </head>
-    <body>
-        <div id="root"></div>
-        <script type="module" src="/index.js"></script>
-    </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>last.js — a tiny, readable React</title>
+<meta name="description" content="last.js — a tiny, deliberately-readable reimplementation of React's core ideas. Read the annotated source: components, useState, useEffect, useContext, and a DOM reconciler in under 500 lines.">
+<meta name="theme-color" content="#fbfaf7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23bf3c11'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='34' font-weight='700' fill='%23fff' text-anchor='middle'%3El%3C/text%3E%3C/svg%3E">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+
+  :root{
+    --bg:#fbfaf7; --panel:#ffffff; --ink:#26221c; --ink-2:#5e584e; --ink-3:#8c857a;
+    --line:#e7e2d8; --line-2:#d7d1c4; --accent:#bf3c11; --accent-2:#982f0d;
+    --code-bg:#fbfaf6;
+    --t-com:#8d9889; --t-kw:#a8325a; --t-str:#1f7a3c; --t-num:#9a5a1e; --t-fn:#2c5aa8; --t-cls:#7a47b5;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,Cambria,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji",sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code","DejaVu Sans Mono",Menlo,Consolas,monospace;
+  }
+
+  html{scroll-behavior:smooth}
+  body{margin:0;font:16px/1.65 var(--sans);color:var(--ink);background:var(--bg);
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.9em;background:rgba(120,108,86,.11);padding:.08em .35em;border-radius:4px}
+  [id]{scroll-margin-top:62px}
+
+  .wrap{max-width:1320px;margin:0 auto;padding:0 clamp(16px,4vw,40px)}
+
+  /* ── top bar ───────────────────────────────────────────────────────────── */
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:22px;
+    padding:11px clamp(16px,4vw,40px);
+    background:color-mix(in srgb,var(--bg) 80%,transparent);
+    -webkit-backdrop-filter:saturate(1.5) blur(10px);backdrop-filter:saturate(1.5) blur(10px);
+    border-bottom:1px solid var(--line)}
+  .brand{font-family:var(--mono);font-weight:600;font-size:15.5px;letter-spacing:-.01em;color:var(--ink)}
+  .brand .dot{color:var(--accent)}
+  .topbar nav{margin-left:auto;display:flex;align-items:center;gap:clamp(10px,2.3vw,24px);font-size:14px}
+  .topbar nav a{color:var(--ink-2)}
+  .topbar nav a:hover{color:var(--accent);text-decoration:none}
+  .topbar nav .gh{color:var(--ink)}
+
+  /* ── hero ──────────────────────────────────────────────────────────────── */
+  .hero{padding:clamp(52px,9vw,108px) clamp(16px,4vw,40px) clamp(34px,6vw,60px);max-width:1320px;margin:0 auto}
+  .hero h1{font-family:var(--mono);font-size:clamp(42px,8.4vw,82px);line-height:1;letter-spacing:-.035em;
+    margin:0 0 .3em;font-weight:600;color:var(--ink)}
+  .hero h1 .dot{color:var(--accent)}
+  .hero .tagline{font-family:var(--serif);font-size:clamp(20px,2.7vw,27px);line-height:1.36;color:var(--ink);
+    max-width:24ch;margin:0 0 1.2em;font-weight:400}
+  .hero .sub{font-size:16.5px;line-height:1.7;color:var(--ink-2);max-width:60ch;margin:0 0 1.9em}
+  .hero .sub b{color:var(--ink);font-weight:600}
+  .hero-actions{display:flex;flex-wrap:wrap;gap:11px;margin-bottom:2.4em}
+  .btn{display:inline-block;font:600 14.5px/1 var(--sans);padding:11px 18px;border-radius:9px;
+    border:1px solid transparent;cursor:pointer}
+  .btn-primary{background:var(--ink);color:#fff}
+  .btn-primary:hover{background:var(--accent);text-decoration:none}
+  .btn-ghost{background:transparent;border-color:var(--line-2);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);text-decoration:none}
+  .codeblock{font-family:var(--mono);font-size:13px;line-height:1.7;background:var(--code-bg);
+    border:1px solid var(--line);border-radius:12px;padding:15px 17px;overflow-x:auto}
+  .codeblock .row{white-space:pre}
+  .codeblock .lc{white-space:pre}
+  .hero-code{max-width:660px}
+  .hero-cap{font-size:13px;color:var(--ink-3);margin:.8em 0 0}
+
+  /* ── generic prose ─────────────────────────────────────────────────────── */
+  .prose{font-family:var(--serif);font-size:18.5px;line-height:1.72;color:var(--ink)}
+  .prose h3{font-family:var(--sans);font-size:clamp(23px,3.4vw,31px);line-height:1.2;letter-spacing:-.012em;
+    margin:1.6em 0 .55em;font-weight:700;color:var(--ink)}
+  .prose h3:first-child{margin-top:0}
+  .prose h4{font-family:var(--sans);font-size:12.5px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;
+    color:var(--accent);margin:2em 0 .6em}
+  .prose p{margin:0 0 1.05em}
+  .prose ol,.prose ul{margin:.1em 0 1.1em;padding-left:1.4em}
+  .prose li{margin:0 0 .55em}
+  .prose .ann-pre{font-family:var(--mono);font-size:13.5px;line-height:1.6;white-space:pre;overflow-x:auto;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 13px;margin:.1em 0 1.1em;
+    color:var(--ink-2)}
+  .prose code{font-size:.83em}
+  .prose strong{font-weight:700}
+
+  /* ── overview section ──────────────────────────────────────────────────── */
+  .section{padding:clamp(42px,7vw,84px) 0;border-top:1px solid var(--line)}
+  .section-overview{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 4%,var(--bg)),var(--bg) 220px)}
+  .overview-grid{max-width:1320px;margin:0 auto;padding:0 clamp(16px,4vw,40px);
+    display:grid;grid-template-columns:188px minmax(0,1fr);gap:clamp(28px,5vw,68px)}
+  .eyebrow{font-family:var(--sans);text-transform:uppercase;letter-spacing:.13em;font-size:12px;font-weight:700;
+    color:var(--accent);margin:0 0 1em}
+  .overview-body{max-width:64ch}
+  .toc{position:sticky;top:60px;align-self:start;display:flex;flex-direction:column;gap:8px;font-size:13.5px;
+    font-family:var(--sans);padding-top:4px}
+  .toc-title{text-transform:uppercase;letter-spacing:.11em;font-size:11px;font-weight:700;color:var(--ink-3);
+    margin-bottom:4px}
+  .toc a{color:var(--ink-2)}
+  .toc a:hover{color:var(--accent);text-decoration:none}
+
+  /* ── source section ────────────────────────────────────────────────────── */
+  .source-inner{max-width:1320px;margin:0 auto;padding:0 clamp(16px,4vw,40px)}
+  .source-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    border-bottom:2px solid var(--ink);padding-bottom:10px}
+  .source-head h2{font-family:var(--sans);font-size:clamp(22px,3vw,30px);margin:0;font-weight:700;letter-spacing:-.012em}
+  .source-head .right{display:flex;align-items:center;gap:13px;font-size:13.5px;color:var(--ink-2);font-family:var(--sans)}
+  .source-head .right a{color:var(--ink-2)}
+  .source-head .right a:hover{color:var(--accent)}
+  .toggle{display:inline-flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
+  .toggle button{font:600 12.5px/1 var(--sans);padding:7px 12px;border:0;background:transparent;color:var(--ink-2);
+    cursor:pointer}
+  .toggle button.on{background:var(--ink);color:#fff}
+  .source-hint{font-size:13px;line-height:1.6;color:var(--ink-3);margin:14px 0 26px;font-family:var(--sans);max-width:72ch}
+
+  /* the literate two-column layout: each chunk is a grid row whose two cells
+     share the row's height (grid sizes a row to its tallest cell), so the
+     comment for a stretch of code holds its position while the code scrolls
+     past it — comments and the code they describe scroll together by construction */
+  .literate{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1.5fr);column-gap:clamp(18px,3.4vw,52px)}
+  .lit-doc,.lit-code{border-top:1px solid var(--line);min-width:0}
+  .lit-doc{font-family:var(--serif);font-size:16.5px;line-height:1.62;color:var(--ink);padding:20px 8px 24px 0}
+  .lit-doc:empty{border-top:0;padding:0}
+  .lit-doc>:first-child{margin-top:0}
+  .lit-doc>:last-child{margin-bottom:0}
+  .lit-doc h4{font-family:var(--sans);font-size:12px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;
+    color:var(--accent);margin:1.6em 0 .65em}
+  .lit-doc h4:first-child{margin-top:0}
+  .lit-doc h3{font-family:var(--sans);font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0 0 .5em;color:var(--ink)}
+  .lit-doc p{margin:0 0 .85em}
+  .lit-doc ol,.lit-doc ul{margin:.15em 0 .85em;padding-left:1.3em}
+  .lit-doc li{margin:0 0 .42em}
+  .lit-doc .ann-pre{font-family:var(--mono);font-size:12.4px;line-height:1.55;white-space:pre;overflow-x:auto;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin:.15em 0 .85em;
+    color:var(--ink-2)}
+  .lit-doc code{font-size:.85em}
+
+  /* a comment block with no code beneath it (a section header) spans the full width */
+  .lit-full{grid-column:1/-1;border-top:2px solid var(--ink);margin-top:34px;padding:24px 0 4px}
+  .lit-full h4{font-family:var(--sans);font-size:clamp(20px,2.6vw,26px);text-transform:none;letter-spacing:-.012em;
+    color:var(--ink);margin:0 0 .35em}
+  .lit-full p{font-family:var(--serif);font-size:16.5px;line-height:1.6;color:var(--ink-2);max-width:66ch;margin:0 0 .6em}
+  .lit-full .ann-pre{max-width:66ch}
+
+  .lit-code{overflow-x:auto;padding:18px 0 22px}
+  .codewrap{font-family:var(--mono);font-size:12.6px;line-height:1.62;min-width:max-content}
+  .lit-code .row,.raw .row{display:flex;white-space:pre}
+  .lit-code .ln,.raw .ln{flex:0 0 auto;width:3.5em;text-align:right;padding-right:1em;color:var(--ink-3);
+    user-select:none;position:sticky;left:0;background:var(--bg)}
+  .lit-code .lc,.raw .lc{flex:1 1 auto;white-space:pre}
+  .lit-code .row:hover,.raw .row:hover{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+
+  .raw{font-family:var(--mono);font-size:12.6px;line-height:1.62;overflow-x:auto;padding:16px 0 50px;min-width:max-content}
+
+  /* token colours */
+  .t-com{color:var(--t-com);font-style:italic}
+  .t-kw{color:var(--t-kw);font-weight:600}
+  .t-str{color:var(--t-str)}
+  .t-num{color:var(--t-num)}
+  .t-fn{color:var(--t-fn)}
+  .t-cls{color:var(--t-cls)}
+  .load-error{font-family:var(--sans);color:var(--ink-2);background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:18px 20px;line-height:1.6}
+
+  /* ── closing CTA + footer ──────────────────────────────────────────────── */
+  .cta{text-align:center;padding:clamp(48px,8vw,96px) clamp(16px,4vw,40px);border-top:1px solid var(--line);
+    background:linear-gradient(0deg,color-mix(in srgb,var(--accent) 4%,var(--bg)),var(--bg))}
+  .cta h2{font-family:var(--sans);font-size:clamp(24px,3.6vw,34px);margin:0 0 .35em;font-weight:700;letter-spacing:-.012em}
+  .cta p{color:var(--ink-2);margin:0 0 1.5em;font-size:16.5px}
+  .cta .hero-actions{justify-content:center}
+  .sitefoot{border-top:1px solid var(--line);padding:26px clamp(16px,4vw,40px);font-size:13.5px;color:var(--ink-3);
+    display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between;align-items:center;font-family:var(--sans)}
+  .sitefoot a{color:var(--ink-2)}
+  .sitefoot .mono{font-family:var(--mono)}
+
+  /* ── responsive ────────────────────────────────────────────────────────── */
+  @media (max-width:880px){
+    .literate{grid-template-columns:1fr;column-gap:0}
+    .lit-doc{padding:20px 0 12px}
+    .lit-code{border-top:0;padding-top:4px}
+    .lit-doc:empty{display:none}
+    .lit-full{margin-top:24px}
+    .overview-grid{grid-template-columns:1fr;gap:0}
+    .toc{position:static;flex-direction:row;flex-wrap:wrap;gap:8px 16px;margin-bottom:26px;padding-bottom:18px;
+      border-bottom:1px solid var(--line)}
+    .toc-title{flex-basis:100%}
+    .topbar nav .hide-sm{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="brand">last<span class="dot">.js</span></span>
+  <nav>
+    <a href="#overview" class="hide-sm">Overview</a>
+    <a href="#source">Annotated source</a>
+    <a href="demo.html">Demo</a>
+    <a href="https://github.com/incrementallair/last-js" class="gh">GitHub ↗</a>
+  </nav>
+</header>
+
+<main>
+
+  <section class="hero">
+    <h1>last<span class="dot">.js</span></h1>
+    <p class="tagline">A tiny, readable reimplementation of React's core ideas.</p>
+    <p class="sub">Components, <b>useState</b>, <b>useEffect</b>, <b>useContext</b>, and a DOM reconciler — under
+      500 lines, no build step, plain ES modules. Read <code>last.js</code> end to end and you've seen the spine
+      of React. Below: the whole file, with its comments lifted out and set alongside the code they describe.</p>
+    <div class="hero-actions">
+      <a href="#source" class="btn btn-primary">Read the annotated source ↓</a>
+      <a href="demo.html" class="btn btn-ghost">Live demo</a>
+      <a href="https://github.com/incrementallair/last-js" class="btn btn-ghost">GitHub</a>
+    </div>
+    <div class="codeblock hero-code" id="hero-snippet"></div>
+    <p class="hero-cap">A component is a plain function that returns an element — the same <code>{ type, props }</code>
+      description JSX compiles to.</p>
+  </section>
+
+  <section class="section section-overview" id="overview">
+    <div class="overview-grid">
+      <aside class="toc">
+        <div class="toc-title">Contents</div>
+        <div id="toc-links"></div>
+      </aside>
+      <div class="overview-body">
+        <p class="eyebrow">How it works</p>
+        <div class="prose" id="overview-body">
+          <p style="color:var(--ink-3)">Loading <code>last.js</code>…</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="source" style="padding-bottom:clamp(40px,7vw,72px)">
+    <div class="source-inner">
+      <div class="source-head">
+        <h2>last.js, annotated</h2>
+        <div class="right">
+          <span id="source-meta"></span>
+          <span class="toggle" role="group" aria-label="View mode">
+            <button id="view-annotated" type="button" aria-pressed="true">Annotated</button>
+            <button id="view-raw" type="button" aria-pressed="false">Raw</button>
+          </span>
+        </div>
+      </div>
+      <p class="source-hint">Each row pairs a comment with the code it describes. They share the row's height, so a
+        long block of code scrolls past while its comment stays put — the comments keep pace with the code no matter
+        how the lengths differ. Hover a line to highlight it.</p>
+      <div class="literate" id="literate">
+        <div class="load-error" style="grid-column:1/-1">Loading the source…</div>
+      </div>
+      <div class="raw" id="raw" hidden></div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2>The whole library fits in your head.</h2>
+    <p>Read it, fork it, break it. Then go read React's source and recognise the shape.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/incrementallair/last-js" class="btn btn-primary">Get it on GitHub</a>
+      <a href="demo.html" class="btn btn-ghost">See the demo</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="sitefoot">
+  <span>last<span class="dot" style="color:var(--accent)">.js</span> — a teaching reimplementation of React. MIT licensed.</span>
+  <span><a href="https://github.com/incrementallair/last-js">github.com/incrementallair/last-js</a></span>
+</footer>
+
+<script type="module">
+// ── Homepage renderer for last.js ─────────────────────────────────────────────
+//
+// Fetch last.js at runtime, split it into comment / code "chunks", and render
+// each chunk as one row of a two-column grid: the comment on the left, the code
+// it documents on the right. CSS grid sizes each row to its tallest cell, so the
+// two halves of a chunk are always vertically aligned at the top — which means
+// the comments scroll at exactly the rate the matching code does, with no
+// JavaScript scroll-syncing at all.
+
+const GH      = 'https://github.com/incrementallair/last-js';
+const RAW_URL = GH + '/blob/main/last.js';
+
+// ── tiny helpers ──────────────────────────────────────────────────────────────
+const esc  = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+// Markdown-ish inline formatting for comment prose. Input is raw text; the
+// output is HTML-escaped with `code`, **bold** and *emphasis* spans applied.
+function inline(raw) {
+  let s = esc(raw);
+  s = s.replace(/`([^`]+)`/g, (_, c) => '<code>' + c + '</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*\w])\*(\S(?:[^*]*\S)?)\*(?![*\w])/g, '$1<em>$2</em>');
+  return s;
+}
+
+// ── one-line JavaScript syntax highlighter ────────────────────────────────────
+// Only ever fed a single source line. The code column never contains a multi-line
+// /* … */ block (those are full-line comments and live in the comment column), so
+// per-line tokenising is enough; trailing `// …` comments are handled inline.
+const KEYWORDS = new Set(('const let var function return if else for while new class this typeof in of null ' +
+  'undefined true false void throw extends import export default from continue break case switch do delete ' +
+  'instanceof yield async await static super').split(' '));
+const TOKEN = /(\/\/.*$)|(`(?:[^`\\]|\\.)*`|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")|(\b\d[\d_]*(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)/g;
+
+function highlight(line) {
+  let out = '', last = 0, m;
+  TOKEN.lastIndex = 0;
+  while ((m = TOKEN.exec(line))) {
+    out += esc(line.slice(last, m.index));
+    if (m[1])      out += '<span class="t-com">' + esc(m[1]) + '</span>';
+    else if (m[2]) out += '<span class="t-str">' + esc(m[2]) + '</span>';
+    else if (m[3]) out += '<span class="t-num">' + m[3] + '</span>';
+    else {
+      const w        = m[4];
+      const member   = /\.\s*$/.test(line.slice(0, m.index));            // foo.bar  — bar is a property
+      const callish  = /^\s*\(/.test(line.slice(m.index + w.length));    // foo(...)  — foo is called
+      if (!member && KEYWORDS.has(w))            out += '<span class="t-kw">'  + w      + '</span>';
+      else if (callish)                          out += '<span class="t-fn">'  + esc(w) + '</span>';
+      else if (/^[A-Z]/.test(w) && !member)      out += '<span class="t-cls">' + esc(w) + '</span>';
+      else                                       out += esc(w);
+    }
+    last = TOKEN.lastIndex;
+  }
+  out += esc(line.slice(last));
+  return out === '' ? '&nbsp;' : out;
+}
+
+// ── parse the source into an overview + chunks ────────────────────────────────
+// A chunk is a run of comment lines followed by the code lines they introduce
+// (up to the next comment). The file's leading block comment is pulled out as a
+// standalone "overview" instead of being attached to one line of code.
+function parseSource(src) {
+  const raw = src.replace(/\r\n?/g, '\n').split('\n');
+
+  // classify every line: 'comment' | 'code' | 'blank'
+  const lines = [];
+  let inBlock = false;
+  raw.forEach((text, i) => {
+    const t = text.trim();
+    let cls;
+    if (inBlock)               { cls = 'comment'; if (t.includes('*/')) inBlock = false; }
+    else if (t === '')           cls = 'blank';
+    else if (t.startsWith('//')) cls = 'comment';
+    else if (t.startsWith('/*')) { cls = 'comment'; if (!t.includes('*/')) inBlock = true; }
+    else                         cls = 'code';
+    lines.push({ n: i + 1, text, cls });
+  });
+
+  let i = 0;
+  while (i < lines.length && lines[i].cls === 'blank') i++;
+  const overview = [];
+  if (i < lines.length && lines[i].cls === 'comment')
+    while (i < lines.length && lines[i].cls === 'comment') overview.push(lines[i++]);
+
+  const chunks = [];
+  while (i < lines.length) {
+    while (i < lines.length && lines[i].cls === 'blank') i++;            // gap between chunks
+    if (i >= lines.length) break;
+    const doc = [], code = [];
+    while (i < lines.length && lines[i].cls === 'comment') doc.push(lines[i++]);
+    while (i < lines.length && lines[i].cls === 'blank') i++;            // gap between comment and code
+    while (i < lines.length && lines[i].cls !== 'comment') code.push(lines[i++]);
+    while (code.length && code[code.length - 1].cls === 'blank') code.pop();
+    if (doc.length || code.length) chunks.push({ doc, code });
+  }
+  return { overview, chunks, lineCount: lines.length };
+}
+
+// ── comment text → HTML ───────────────────────────────────────────────────────
+// Strip the comment markers off one source line, leaving its text content.
+function stripMarkers(text) {
+  if (/^\s*\/\*\*?\s*$/.test(text)) return '';      // "/**" or "/*" alone
+  if (/^\s*\*\/\s*$/.test(text))    return '';      // "*/" alone
+  let s = text.replace(/^\s*\/\*\*?/, '');          // leading "/**" or "/*" with text after
+  s = s.replace(/\*\/\s*$/, '');                    // trailing "*/"
+  s = s.replace(/^\s*\*\x20?/, '');                 // " * " block-comment continuation
+  s = s.replace(/^\s*\/\/\x20?/, '');               // "// " line comment
+  return s.replace(/\s+$/, '');
+}
+
+const HEADING_RE = /^[─—-]{2,}\s+(.+?)\s+[─—-]{2,}$/;   // "── Title ────"
+const RULE_RE    = /^[─—=_-]{3,}$/;                               // "==========" / "──────────"
+
+// Render a run of comment source-lines (a chunk's doc, or the overview block)
+// into an HTML string, and return the section headings it contained.
+function renderDoc(srcLines) {
+  const texts = srcLines.map(l => stripMarkers(l.text));
+
+  // group into segments, split on blank lines / headings / rules
+  const segs = [];
+  let cur = [];
+  const flushPara = () => { if (cur.length) { segs.push({ kind: 'p', lines: cur }); cur = []; } };
+  for (const t of texts) {
+    const tr = t.trim();
+    const h  = tr.match(HEADING_RE);
+    if (h)              { flushPara(); segs.push({ kind: 'h', text: h[1] }); continue; }
+    if (RULE_RE.test(tr)) {                                  // a "====" underline titles the line above it
+      if (cur.length === 1) { segs.push({ kind: 'h3', text: cur[0].trim() }); cur = []; }
+      else                  flushPara();
+      continue;
+    }
+    if (tr === '')      { flushPara(); continue; }
+    cur.push(t);
+  }
+  flushPara();
+
+  // a paragraph is really a list item, an aligned block, or plain prose
+  for (const s of segs) {
+    if (s.kind !== 'p') continue;
+    const first  = s.lines[0];
+    const joined = s.lines.join('\n');
+    const num = first.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    const bul = first.match(/^\s*[-•‣▪]\s+(.*)$/);
+    if (num)                                          { s.kind = 'li';  s.num = +num[1];
+                                                        s.text = [num[2]].concat(s.lines.slice(1).map(x => x.trim())).join(' ').trim(); }
+    else if (bul)                                     { s.kind = 'bul';
+                                                        s.text = [bul[1]].concat(s.lines.slice(1).map(x => x.trim())).join(' ').trim(); }
+    else if (/\S {2,}\S/.test(joined) || /^\s{2,}\S/.test(first)) { s.kind = 'pre'; s.text = joined; }
+    else                                              { s.text = s.lines.map(x => x.trim()).join(' ').trim(); }
+  }
+
+  // emit, grouping consecutive list items into a single <ol>/<ul>
+  let html = '', list = null;
+  const closeList = () => { if (list) { html += list === 'ol' ? '</ol>' : '</ul>'; list = null; } };
+  for (const s of segs) {
+    if (s.kind === 'li' || s.kind === 'bul') {
+      const want = s.kind === 'li' ? 'ol' : 'ul';
+      if (list !== want) { closeList(); html += want === 'ol' ? '<ol start="' + s.num + '">' : '<ul>'; list = want; }
+      html += '<li>' + inline(s.text) + '</li>';
+      continue;
+    }
+    closeList();
+    if (s.kind === 'h')        html += '<h4 id="sec-' + slug(s.text) + '">' + inline(s.text) + '</h4>';
+    else if (s.kind === 'h3')  html += '<h3>' + inline(s.text) + '</h3>';
+    else if (s.kind === 'pre') html += '<pre class="ann-pre">' + s.text.split('\n').map(inline).join('\n') + '</pre>';
+    else if (s.text)           html += '<p>' + inline(s.text) + '</p>';
+  }
+  closeList();
+
+  const headings = segs.filter(s => s.kind === 'h').map(s => ({ text: s.text, id: 'sec-' + slug(s.text) }));
+  return { html, headings };
+}
+
+// ── render code lines with a line-number gutter ───────────────────────────────
+function codeRows(srcLines) {
+  return srcLines.map(l =>
+    '<div class="row"><span class="ln">' + l.n + '</span><span class="lc">' +
+    (l.cls === 'blank' ? '&nbsp;' : highlight(l.text)) + '</span></div>'
+  ).join('');
+}
+
+// ── render the literate two-column view ───────────────────────────────────────
+function renderLiterate(parsed) {
+  let html = '';
+  const headings = [];
+  for (const ch of parsed.chunks) {
+    const doc = ch.doc.length ? renderDoc(ch.doc) : { html: '', headings: [] };
+    headings.push(...doc.headings);
+    if (ch.doc.length && !ch.code.length) {                 // a section header — span both columns
+      html += '<div class="lit-doc lit-full">' + doc.html + '</div>';
+    } else {
+      html += '<div class="lit-doc">' + doc.html + '</div>';
+      html += '<div class="lit-code"><div class="codewrap">' + codeRows(ch.code) + '</div></div>';
+    }
+  }
+  return { html, headings };
+}
+
+// ── render the raw (verbatim, highlighted) view ───────────────────────────────
+function renderRaw(src) {
+  const raw = src.replace(/\r\n?/g, '\n').split('\n');
+  let inBlock = false, html = '';
+  raw.forEach((text, i) => {
+    const t = text.trim();
+    let isComment;
+    if (inBlock)               { isComment = true; if (t.includes('*/')) inBlock = false; }
+    else if (t === '')           isComment = false;
+    else if (t.startsWith('//')) isComment = true;
+    else if (t.startsWith('/*')) { isComment = true; if (!t.includes('*/')) inBlock = true; }
+    else                         isComment = false;
+    const content = t === '' ? '&nbsp;'
+      : isComment ? '<span class="t-com">' + esc(text) + '</span>'
+      : highlight(text);
+    html += '<div class="row"><span class="ln">' + (i + 1) + '</span><span class="lc">' + content + '</span></div>';
+  });
+  return html;
+}
+
+// ── boot ──────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+// hero snippet (rendered with the same highlighter)
+(() => {
+  const snippet = [
+    "import { createElement, useState } from './last.js';",
+    "import { button } from './html.js';",
+    "",
+    "const Counter = () => {",
+    "  const [n, setN] = useState(0);",
+    "  return createElement(button, { onClick: () => setN(n + 1) }, `Clicked ${n} times`);",
+    "};",
+  ];
+  $('hero-snippet').innerHTML = snippet
+    .map(l => '<div class="row"><span class="lc">' + (l === '' ? '&nbsp;' : highlight(l)) + '</span></div>')
+    .join('');
+})();
+
+(async () => {
+  let src;
+  try {
+    const res = await fetch(new URL('last.js', document.baseURI), { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    src = await res.text();
+  } catch (err) {
+    const msg = '<div class="load-error" style="grid-column:1/-1">Couldn\'t load <code>last.js</code> (' +
+      esc(String(err.message || err)) + '). This page reads the source over HTTP — run <code>npm start</code> and ' +
+      'open <code>http://localhost:3000</code>, or <a href="' + RAW_URL + '">read <code>last.js</code> on GitHub</a>.</div>';
+    $('literate').innerHTML = msg;
+    $('overview-body').innerHTML = '';
+    return;
+  }
+
+  const parsed = parseSource(src);
+
+  // overview prose
+  $('overview-body').innerHTML = renderDoc(parsed.overview).html;
+
+  // annotated source
+  const lit = renderLiterate(parsed);
+  $('literate').innerHTML = lit.html;
+
+  // raw source
+  $('raw').innerHTML = renderRaw(src);
+
+  // table of contents
+  const tocItems = [{ text: 'Overview', id: 'overview' }].concat(lit.headings);
+  $('toc-links').innerHTML = tocItems
+    .map(h => '<a href="#' + h.id + '">' + esc(h.text) + '</a>')
+    .join('');
+
+  // meta line
+  $('source-meta').innerHTML = parsed.lineCount + ' lines · <a href="' + RAW_URL + '">raw on GitHub ↗</a>';
+
+  // annotated / raw toggle
+  const bAnn = $('view-annotated'), bRaw = $('view-raw'), litEl = $('literate'), rawEl = $('raw');
+  const show = raw => {
+    rawEl.hidden = !raw;  litEl.hidden = raw;
+    bRaw.classList.toggle('on', raw);   bAnn.classList.toggle('on', !raw);
+    bRaw.setAttribute('aria-pressed', String(raw));  bAnn.setAttribute('aria-pressed', String(!raw));
+  };
+  bAnn.addEventListener('click', () => show(false));
+  bRaw.addEventListener('click', () => show(true));
+  show(false);
+})();
+</script>
+</body>
 </html>
