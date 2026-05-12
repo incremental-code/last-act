@@ -1,4 +1,7 @@
 /**
+ * Reference implementation retained for comparison and parity planning.
+ * The active implementation currently lives under zero\
+ *
  * Mini React - A minimal React-like library implementation
  * 
  * This library provides a simplified version of React's core functionality:

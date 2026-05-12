@@ -1,3 +1,4 @@
+// Reference demo component for the older root-level implementation.
 import { createElement } from '../last.js';
 
 export default function Button({ onClick, children }) {

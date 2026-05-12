@@ -1,3 +1,4 @@
+// Reference demo component for the older root-level implementation.
 import { createElement, useState, useEffect } from '../last.js';
 import Button from './Button.js';
 

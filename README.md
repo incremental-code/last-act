@@ -1,141 +1,79 @@
-# Mini React
+# LastJS
 
-A minimal React-like library that supports `useState` and `useEffect` hooks with virtual DOM diffing.
+This repo currently contains **two React-like implementations**. The active, current implementation lives in **`zero\`**. The root-level files are kept as a **reference implementation** for comparison and parity work.
 
-## Features
+## Canonical implementation
 
-- ✅ Functional components
-- ✅ `useState` hook for state management
-- ✅ `useEffect` hook for side effects
-- ✅ Virtual DOM diffing for efficient updates
-- ✅ Component composition
-- ✅ Event handling
-- ✅ **Per-component hook state tracking** (fixes conditional component rendering issues)
+`index.html` boots `zero\index.js`, which renders the current demo app from `zero\app.js`.
 
-## Getting Started
+The canonical `zero\` implementation currently demonstrates:
+
+- `useState`
+- `createContext` / `useContext`
+- stable conditional rendering with falsy child slots
+- key-based child matching
+- recursive rendering of function components nested inside HTML elements
+- a `createRoot(...).render(...)` API
+
+## Getting started
 
 1. Install dependencies:
-```bash
-npm install
-```
-
+   ```bash
+   npm install
+   ```
 2. Start the development server:
-```bash
-npm start
-```
+   ```bash
+   npm start
+   ```
+3. Open `http://localhost:3000`
 
-3. Open your browser and navigate to `http://localhost:3000`
+## Repo layout
 
-## Example
+| Path | Status | Purpose |
+| --- | --- | --- |
+| `zero\` | Canonical | Current implementation and demo app |
+| `index.html` | Canonical entry | Loads `zero\index.js` |
+| `last.js` | Reference | Older object-based virtual DOM implementation |
+| `index.js` | Reference | Older demo entry point for the root implementation |
+| `test-conditional.js` | Reference | Older conditional component rendering demo |
+| `test-broken-conditional.js` | Reference | Older demo showing broken conditional hook calls |
+| `components\` | Reference | Demo components for the root implementation |
 
-The example includes a ConditionalTest component that demonstrates:
-- State management with `useState`
-- Side effects with `useEffect` (console logging)
-- Conditional component rendering that maintains hook state correctly
-- Component composition with reusable Button components
-- Event handling
+## Functional differences between implementations
 
-## How it Works
+| Area | Root implementation | `zero\` implementation |
+| --- | --- | --- |
+| Authoring model | `createElement(type, props, ...children)` returns object-shaped VDOM | array/tuple VDOM specs like `[div, props, children]` |
+| Entry point | `render(Component, container)` | `createRoot(container).render(Component, props)` and `render(...)` |
+| Hooks | `useState`, `useEffect` | `useState`, `createContext`, `useContext` |
+| Context | Not implemented | Implemented |
+| Conditional rendering | Demonstrated via `test-conditional.js` | Supported with stable falsy child handling |
+| Keyed children | Not implemented | Implemented via `key` matching in child reconciliation |
+| Nested function components under HTML nodes | Limited in the older code path | Explicit recursive processing via `processVdomChildren(...)` |
+| DOM/event updates | More selective prop and event updates | Simpler updates; event listeners are currently reattached on every update |
+| Demo coverage | `useEffect`, `createElement`, conditional rendering examples | context, conditional rendering, keyed list matching |
 
-This mini React implementation includes:
-- A simple virtual DOM representation
-- Tree diffing algorithm for efficient DOM updates
-- **Component fiber system** for per-component state tracking
-- Hook system for state and effects
-- Component rendering and re-rendering
-- Event delegation
+## Current direction
 
-### Component Fiber System
+The `zero\` implementation is the code path to extend. The root implementation is still useful because it documents behavior and APIs that may be worth carrying forward, especially:
 
-The library uses a component fiber system (similar to React's fiber architecture) to track state per component instance rather than globally. This ensures that:
+- `createElement(...)` authoring
+- `useEffect(...)`
+- the older demo scenarios around conditional rendering and hook behavior
 
-- Hook state is isolated per component
-- Conditional component rendering doesn't break hook order
-- Multiple instances of the same component maintain separate state
-- Effects are properly scoped to their components
+## Parity roadmap
 
-## Project Structure
+- [ ] Decide whether the canonical API should stay array-spec only or gain a compatibility layer/helper similar to `createElement(...)`
+- [ ] Add an effect hook story to `zero\` (`useEffect` or an equivalent API)
+- [ ] Port the more selective prop/event update behavior from the root implementation into `zero\last.js`
+- [ ] Recreate or migrate the useful root demo scenarios under the canonical `zero\` app
+- [ ] Remove or archive root-level reference files once the remaining useful behavior is either ported or intentionally dropped
 
-```
-├── last.js                    # Core library implementation
-├── test-conditional.js        # Working conditional component rendering test
-├── test-broken-conditional.js # Broken conditional hook calls test
-├── index.js                   # Original example application
-├── index.html                 # HTML entry point
-├── package.json               # Project configuration
-└── README.md                  # This file
-``` 
+## Notes on hook behavior
 
-## Key Improvements
+The older reference demos are still useful for one important distinction:
 
-### Conditional Rendering Fix
+- **Conditional component rendering can be supported**
+- **Conditional hook calls inside the same component are still invalid**
 
-The original implementation had a critical flaw where global hook state tracking would break with conditional component rendering:
-
-```javascript
-function ParentComponent({ showChild }) {
-  const [parentState, setParentState] = useState(0);
-  
-  return (
-    <div>
-      <p>Parent: {parentState}</p>
-      {showChild && <ChildComponent />}  // This would break with global hooks
-    </div>
-  );
-}
-
-function ChildComponent() {
-  const [childState, setChildState] = useState('child');  // Hook order changes!
-  return <p>Child: {childState}</p>;
-}
-```
-
-With the new per-component fiber system, each component instance maintains its own hook state, preventing this issue.
-
-### Important Distinction: Conditional Hooks vs Conditional Components
-
-**❌ BROKEN - Conditional Hook Calls (Cannot be fixed):**
-```javascript
-function BrokenComponent({ showExtra }) {
-  const [count, setCount] = useState(0);
-  
-  if (showExtra) {
-    const [extra, setExtra] = useState('extra');  // Conditional hook call
-  }
-  
-  const [final, setFinal] = useState('final');  // This gets wrong state!
-}
-```
-
-**✅ FIXED - Conditional Component Rendering:**
-```javascript
-function WorkingComponent({ showChild }) {
-  const [count, setCount] = useState(0);
-  
-  return (
-    <div>
-      {showChild && <ChildComponent />}  // Conditional component - works!
-    </div>
-  );
-}
-```
-
-The fiber system only fixes the second case. The first case will always break because it violates the Rules of Hooks.
-
-## TODO
-
-- [ ] Support function components in createElement (partially implemented)
-- [ ] Optimize rendering to only update when props change
-- [ ] Add SSR support
-- [ ] Support class components
-- [ ] Support nested web components
-- [ ] Add useContext() hook
-- [ ] Add useCallback() hook
-- [ ] Add useReducer() hook
-- [ ] Support style objects (not just strings)
-- [ ] Add key prop support for efficient list rendering
-- [ ] Improve component fiber reuse and cleanup
-
-## Questions
-
-Is it possible to do declarative data dependency specification in NextJS?
+That distinction should remain documented even if the older demo files are eventually retired.

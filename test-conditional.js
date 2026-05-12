@@ -1,3 +1,5 @@
+// Reference demo for the older root-level implementation.
+// Kept to document conditional component rendering behavior while zero\ is the canonical path.
 import { render, useState, useEffect, createElement } from './last.js';
 
 /**

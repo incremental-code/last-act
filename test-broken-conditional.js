@@ -1,3 +1,5 @@
+// Reference demo for the older root-level implementation.
+// Kept to document why conditional hook calls within one component are invalid.
 import { render, useState, useEffect, createElement } from './last.js';
 
 /**
