@@ -111,14 +111,22 @@
   .toggle button.on{background:var(--ink);color:#fff}
   .source-hint{font-size:13px;line-height:1.6;color:var(--ink-3);margin:14px 0 26px;font-family:var(--sans);max-width:72ch}
 
-  /* the literate two-column layout: each chunk is a grid row whose two cells
-     share the row's height (grid sizes a row to its tallest cell), so the
-     comment for a stretch of code holds its position while the code scrolls
-     past it — comments and the code they describe scroll together by construction */
-  .literate{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1.5fr);column-gap:clamp(18px,3.4vw,52px)}
-  .lit-doc,.lit-code{border-top:1px solid var(--line);min-width:0}
-  .lit-doc{font-family:var(--serif);font-size:16.5px;line-height:1.62;color:var(--ink);padding:20px 8px 24px 0}
-  .lit-doc:empty{border-top:0;padding:0}
+  /* the literate two-column layout: docs and code are independent vertical
+     streams, side-by-side. They scroll at different rates ("parallax") so the
+     shorter column is stretched in time to span the same scroll range as the
+     taller one — start and end stay aligned, the middle drifts.
+     .literate itself takes height = max(docH, codeH); each column is absolutely
+     positioned. JS sets a CSS variable --doc-y on .lit-doc that the parallax
+     scroll handler updates per-frame. */
+  .literate{position:relative;column-gap:clamp(18px,3.4vw,52px)}
+  .literate::after{content:"";display:block;clear:both}
+  .lit-doc,.lit-code{min-width:0;border-top:1px solid var(--line);padding-top:20px}
+  .lit-doc{position:absolute;top:0;left:0;width:calc((100% - clamp(18px,3.4vw,52px)) * (1.02 / (1.02 + 1.5)));
+    font-family:var(--serif);font-size:16.5px;line-height:1.62;color:var(--ink);padding-right:8px;padding-bottom:24px;
+    will-change:transform;transform:translateY(var(--doc-y,0px))}
+  .lit-code{position:absolute;top:0;right:0;width:calc((100% - clamp(18px,3.4vw,52px)) * (1.5 / (1.02 + 1.5)));
+    overflow-x:auto;padding-bottom:22px;
+    will-change:transform;transform:translateY(var(--code-y,0px))}
   .lit-doc>:first-child{margin-top:0}
   .lit-doc>:last-child{margin-bottom:0}
   .lit-doc h4{font-family:var(--sans);font-size:12px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;
@@ -133,14 +141,13 @@
     color:var(--ink-2)}
   .lit-doc code{font-size:.85em}
 
-  /* a comment block with no code beneath it (a section header) spans the full width */
-  .lit-full{grid-column:1/-1;border-top:2px solid var(--ink);margin-top:34px;padding:24px 0 4px}
-  .lit-full h4{font-family:var(--sans);font-size:clamp(20px,2.6vw,26px);text-transform:none;letter-spacing:-.012em;
+  /* a section-header comment block — kept as a doc paragraph with stronger styling. */
+  .lit-doc .lit-full{border-top:2px solid var(--ink);margin-top:34px;padding:24px 0 4px}
+  .lit-doc .lit-full h4{font-family:var(--sans);font-size:clamp(20px,2.6vw,26px);text-transform:none;letter-spacing:-.012em;
     color:var(--ink);margin:0 0 .35em}
-  .lit-full p{font-family:var(--serif);font-size:16.5px;line-height:1.6;color:var(--ink-2);max-width:66ch;margin:0 0 .6em}
-  .lit-full .ann-pre{max-width:66ch}
+  .lit-doc .lit-full p{font-family:var(--serif);font-size:16.5px;line-height:1.6;color:var(--ink-2);max-width:66ch;margin:0 0 .6em}
+  .lit-doc .lit-full .ann-pre{max-width:66ch}
 
-  .lit-code{overflow-x:auto;padding:18px 0 22px}
   .codewrap{font-family:var(--mono);font-size:12.6px;line-height:1.62;min-width:max-content}
   .lit-code .row,.raw .row{display:flex;white-space:pre}
   .lit-code .ln,.raw .ln{flex:0 0 auto;width:3.5em;text-align:right;padding-right:1em;color:var(--ink-3);
@@ -173,11 +180,10 @@
 
   /* ── responsive ────────────────────────────────────────────────────────── */
   @media (max-width:880px){
-    .literate{grid-template-columns:1fr;column-gap:0}
-    .lit-doc{padding:20px 0 12px}
+    .literate{display:block;height:auto !important}
+    .lit-doc,.lit-code{position:static;width:auto;transform:none !important;padding:20px 0 12px}
     .lit-code{border-top:0;padding-top:4px}
-    .lit-doc:empty{display:none}
-    .lit-full{margin-top:24px}
+    .lit-doc .lit-full{margin-top:24px}
     .overview-grid{grid-template-columns:1fr;gap:0}
     .toc{position:static;flex-direction:row;flex-wrap:wrap;gap:8px 16px;margin-bottom:26px;padding-bottom:18px;
       border-bottom:1px solid var(--line)}
@@ -273,11 +279,12 @@
 // ── Homepage renderer for last.js ─────────────────────────────────────────────
 //
 // Fetch last.js at runtime, split it into comment / code "chunks", and render
-// each chunk as one row of a two-column grid: the comment on the left, the code
-// it documents on the right. CSS grid sizes each row to its tallest cell, so the
-// two halves of a chunk are always vertically aligned at the top — which means
-// the comments scroll at exactly the rate the matching code does, with no
-// JavaScript scroll-syncing at all.
+// the comments as one vertical stream on the left and all the code as one
+// stream on the right. The two columns are independent — they have different
+// heights and would normally desync — so a scroll handler runs them at
+// different rates ("parallax"): the shorter column's transform is interpolated
+// so that the section's first and last lines stay aligned across both columns
+// while the middle drifts predictably.
 
 const GH      = 'https://github.com/incrementallair/last-js';
 const RAW_URL = GH + '/blob/main/last.js';
@@ -453,20 +460,87 @@ function codeRows(srcLines) {
 }
 
 // ── render the literate two-column view ───────────────────────────────────────
+// Emit the docs as one continuous left-column stream and the code as one
+// continuous right-column stream. Both are positioned absolutely inside
+// .literate; the parallax handler later sets the .literate height to the
+// taller column and translates the shorter one to keep the ends aligned.
 function renderLiterate(parsed) {
-  let html = '';
+  let docHtml = '', codeHtml = '<div class="codewrap">';
   const headings = [];
   for (const ch of parsed.chunks) {
     const doc = ch.doc.length ? renderDoc(ch.doc) : { html: '', headings: [] };
     headings.push(...doc.headings);
-    if (ch.doc.length && !ch.code.length) {                 // a section header — span both columns
-      html += '<div class="lit-doc lit-full">' + doc.html + '</div>';
+    if (ch.doc.length && !ch.code.length) {                 // section header — doc-only
+      docHtml += '<div class="lit-full">' + doc.html + '</div>';
     } else {
-      html += '<div class="lit-doc">' + doc.html + '</div>';
-      html += '<div class="lit-code"><div class="codewrap">' + codeRows(ch.code) + '</div></div>';
+      if (doc.html) docHtml += doc.html;
+      codeHtml += codeRows(ch.code);
     }
   }
+  codeHtml += '</div>';
+  const html =
+    '<div class="lit-doc">'  + docHtml  + '</div>' +
+    '<div class="lit-code">' + codeHtml + '</div>';
   return { html, headings };
+}
+
+// ── parallax scroll: keep doc & code columns aligned at start and end ─────────
+// The container's height is set to max(docH, codeH). The taller column scrolls
+// at 1× page rate; the shorter column scrolls at (shortH / tallH)× so it
+// traverses its own height over the same scroll distance. Both start at y=0
+// when the container's top hits the viewport and end with their last lines
+// flush with the container's bottom.
+function wireParallax(container) {
+  const doc  = container.querySelector('.lit-doc');
+  const code = container.querySelector('.lit-code');
+  if (!doc || !code) return;
+
+  let docH = 0, codeH = 0, tallH = 0, mobile = false;
+
+  const measure = () => {
+    mobile = window.matchMedia('(max-width: 880px)').matches;
+    if (mobile) {
+      container.style.height = '';
+      doc.style.removeProperty('--doc-y');
+      code.style.removeProperty('--code-y');
+      return;
+    }
+    // measure each column's intrinsic height (transform doesn't affect offsetHeight)
+    docH  = doc.scrollHeight;
+    codeH = code.scrollHeight;
+    tallH = Math.max(docH, codeH);
+    container.style.height = tallH + 'px';
+    update();
+  };
+
+  const update = () => {
+    if (mobile || tallH <= 0) return;
+    const rect = container.getBoundingClientRect();
+    const vh   = window.innerHeight || document.documentElement.clientHeight;
+    // scroll progress 0→1 across the container: 0 when the container's top
+    // first hits the viewport top, 1 when its bottom flushes with the
+    // viewport bottom (so the user has read the whole tall column).
+    const range    = Math.max(1, tallH - vh);
+    const scrolled = Math.max(0, Math.min(range, -rect.top));
+    const p        = scrolled / range;
+    // shorter column lags: its top slides down so it ends flush with the
+    // bottom of the container when p=1. The taller column has slack=0 and
+    // stays at translateY(0).
+    const dy = (tallH - docH)  * p;
+    const cy = (tallH - codeH) * p;
+    doc.style.setProperty('--doc-y',  dy.toFixed(2) + 'px');
+    code.style.setProperty('--code-y', cy.toFixed(2) + 'px');
+  };
+
+  let raf = 0;
+  const onScroll = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; update(); }); };
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', measure);
+  // re-measure after layout settles (fonts, code highlighting)
+  measure();
+  requestAnimationFrame(measure);
+  setTimeout(measure, 200);
 }
 
 // ── render the raw (verbatim, highlighted) view ───────────────────────────────
@@ -530,7 +604,9 @@ const $ = id => document.getElementById(id);
 
   // annotated source
   const lit = renderLiterate(parsed);
-  $('literate').innerHTML = lit.html;
+  const litEl0 = $('literate');
+  litEl0.innerHTML = lit.html;
+  wireParallax(litEl0);
 
   // raw source
   $('raw').innerHTML = renderRaw(src);
@@ -550,6 +626,10 @@ const $ = id => document.getElementById(id);
     rawEl.hidden = !raw;  litEl.hidden = raw;
     bRaw.classList.toggle('on', raw);   bAnn.classList.toggle('on', !raw);
     bRaw.setAttribute('aria-pressed', String(raw));  bAnn.setAttribute('aria-pressed', String(!raw));
+    // .literate height was set in px when first measured; when switching back
+    // to annotated, dispatch resize so wireParallax re-measures with the now-
+    // visible columns.
+    if (!raw) window.dispatchEvent(new Event('resize'));
   };
   bAnn.addEventListener('click', () => show(false));
   bRaw.addEventListener('click', () => show(true));
