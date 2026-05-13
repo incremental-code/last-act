@@ -219,7 +219,29 @@ class RootContainer {
     //   hostShadow       — the new shadow for `element`; we fill in its `.children`.
     processChildren(element, prevHostShadow, componentShadow, hostShadow) {
         const children = element.props?.children;
-        if (!Array.isArray(children)) return;   // single child / text / nothing — no nested components to resolve
+        if (!Array.isArray(children)) {
+            // A single non-array child. Primitives (string / number / null) have no
+            // components inside; element objects do and must be resolved just like
+            // elements in the array case.
+            if (typeof children !== 'object' || children === null) return;
+            if (typeof children.type === 'function') {
+                // Single component child — render it and splice the result back in.
+                const prevChildShadow = getPrevChildShadow(prevHostShadow, children, 0);
+                const [rendered, childShadow] = this.renderComponent(
+                    children.type, children.props, prevChildShadow, componentShadow
+                );
+                element.props.children     = rendered;
+                hostShadow.children[0]    = childShadow;
+            } else {
+                // Single host element child — give it a shadow and recurse in case
+                // it contains nested components.
+                const prevChildShadow = prevHostShadow?.children?.[0] ?? null;
+                const childShadow     = makeShadow(children.key ?? null, componentShadow);
+                hostShadow.children[0] = childShadow;
+                this.processChildren(children, prevChildShadow, componentShadow, childShadow);
+            }
+            return;
+        }
 
         for (let i = 0; i < children.length; i++) {
             const child = children[i];
@@ -297,6 +319,8 @@ class RootContainer {
                 if (child == null) continue;                  // null / undefined render nothing
                 dom.appendChild(this.createDom(child));
             }
+        } else if (typeof children === 'object' && children !== null) {
+            dom.appendChild(this.createDom(children));        // a lone host element
         } else if (children != null) {
             dom.textContent = String(children);               // a lone string/number becomes text content
         }
@@ -363,6 +387,13 @@ class RootContainer {
                     this.diff(prevChild, child, node.children[domIndex], node);  // both present — recurse
                     domIndex++;
                 }
+            }
+        } else if (typeof newChildren === 'object' && newChildren !== null) {
+            // A single host element child — diff it against the previous one.
+            if (node.firstChild && oldChildren != null) {
+                this.diff(oldChildren, newChildren, node.firstChild, node);
+            } else if (!node.firstChild) {
+                node.appendChild(this.createDom(newChildren));
             }
         } else if (newChildren != null) {
             node.textContent = String(newChildren);   // children collapsed to a single text value
