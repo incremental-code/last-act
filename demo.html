@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>last.js — live demo</title>
+<meta name="theme-color" content="#fbfaf7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23bf3c11'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='34' font-weight='700' fill='%23fff' text-anchor='middle'%3El%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#fbfaf7; --ink:#26221c; --ink-2:#5e584e; --ink-3:#8c857a;
+    --line:#e7e2d8; --line-2:#d7d1c4; --accent:#bf3c11;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.55 var(--sans);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .demo-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px clamp(16px,4vw,28px);
+    border-bottom:1px solid var(--line);background:#fff;font-size:14px}
+  .demo-bar .brand{font-family:var(--mono);font-weight:600;color:var(--ink)}
+  .demo-bar .brand .dot{color:var(--accent)}
+  .demo-bar .sep{color:var(--ink-3)}
+  .demo-bar .note{color:var(--ink-2)}
+  .demo-bar a.home{color:var(--ink-2)}
+
+  #root{max-width:760px;padding:24px clamp(16px,4vw,32px) 64px}
+  #root h1{font-size:clamp(26px,4vw,36px);margin:0 0 .2em;letter-spacing:-.01em}
+  #root h2{font-size:18px;margin:.2em 0 .4em;font-weight:700}
+  #root p{margin:.4em 0 .8em;color:var(--ink-2)}
+  #root span{margin-right:.35em}
+  #root button{font:600 13.5px/1 var(--sans);padding:7px 12px;margin:3px 5px 3px 0;border:1px solid var(--line-2);
+    border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
+  #root button:hover{border-color:var(--accent);color:var(--accent)}
+  #root ul{padding-left:1.2em;margin:.4em 0}
+  #root li{margin:.2em 0}
+
+  .demo-tip{max-width:760px;margin:0;padding:14px clamp(16px,4vw,32px) 0;font-size:13.5px;color:var(--ink-3)}
+</style>
+</head>
+<body>
+<header class="demo-bar">
+  <a class="home" href="/">←</a>
+  <span class="brand">last<span class="dot">.js</span></span>
+  <span class="sep">·</span>
+  <span class="note">Live demo — every feature of LastJS in action</span>
+  <span class="sep">·</span>
+  <a href="/#source">Read the annotated source</a>
+</header>
+
+<p class="demo-tip">This page mounts <code>&lt;App&gt;</code> from <code>app.js</code> with <code>last.js</code> — open it
+  alongside <a href="/#source">the source</a> to see what each piece does.</p>
+
+<div id="root"></div>
+
+<script type="module" src="/demo.js"></script>
+</body>
+</html>

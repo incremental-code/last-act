@@ -2,7 +2,7 @@
   "name": "mini-react",
   "version": "1.0.0",
   "description": "A minimal React-like library with useState and useEffect",
-  "main": "index.js",
+  "main": "last.js",
   "scripts": {
     "start": "serve . -p 3000",
     "dev": "serve . -p 3000"

@@ -12,7 +12,10 @@ npm install
 npm start         # serves on http://localhost:3000
 ```
 
-Then open the page and play with the demos in [`app.js`](app.js).
+`http://localhost:3000` is the homepage — it loads [`last.js`](last.js) at runtime and
+shows the whole file with its comments lifted out and set alongside the code they
+describe. The live demo (the components in [`app.js`](app.js)) is at
+[`/demo.html`](demo.html).
 
 ## Authoring model
 
@@ -113,7 +116,8 @@ This is a teaching implementation, not a React replacement. Notably:
 | Path | Purpose |
 | --- | --- |
 | `last.js` | Core library (heavily commented — start here) |
-| `app.js` | Demo application |
+| `index.html` | Homepage with annotated source viewer |
+| `demo.html` | Live demo page |
+| `demo.js` | Demo entry point (mounts `<App>` into `demo.html`) |
+| `app.js` | Demo application components |
 | `html.js` | String constants for HTML element names |
-| `index.js` | Entry point |
-| `index.html` | HTML shell |
