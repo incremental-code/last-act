@@ -1,5 +1,5 @@
 /**
- * Demo app exercising every feature of LastJS (see last.js).
+ * Demo app exercising every feature of Last.act (see last.act.js).
  *
  * Layout: <App> holds a counter + theme in useState, publishes the theme through
  * a context Provider, and renders three self-contained demos below it:
@@ -9,7 +9,7 @@
  * Components are plain functions returning createElement(...) trees; hooks
  * (useState/useEffect/useContext) are called unconditionally at the top of each.
  */
-import { createElement, useState, useEffect, createContext, useContext } from './last.js';
+import { createElement, useState, useEffect, createContext, useContext } from './last.act.js';
 import { div, span, button, h1, h2, p, ul, li } from './html.js';
 
 const lightTheme = `background-color: white; color: black;`;
@@ -22,7 +22,7 @@ export const App = () => {
     const [theme, setTheme] = useState(lightTheme);
 
     useEffect(() => {
-        document.title = `LastJS — count: ${count}`;
+        document.title = `Last.act — count: ${count}`;
     }, [count]);
 
     return createElement(div, null,

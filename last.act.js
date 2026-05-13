@@ -1,5 +1,5 @@
 /**
- * LastJS — a tiny, readable reimplementation of React's core ideas.
+ * Last.act — a tiny, readable reimplementation of React's core ideas.
  * ============================================================================
  *
  * This file is meant to be *read*. It's the smallest thing that still works

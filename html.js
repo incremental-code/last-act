@@ -1,5 +1,5 @@
-// Named constants for the HTML tag strings LastJS understands. A host element's
-// `type` is just the tag name as a string (see createElement in last.js), so
+// Named constants for the HTML tag strings Last.act understands. A host element's
+// `type` is just the tag name as a string (see createElement in last.act.js), so
 // `div` here is literally `'div'`. Importing these instead of writing the raw
 // strings gives editor autocomplete and catches typos.
 export const div = 'div';

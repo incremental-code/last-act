@@ -1,8 +1,8 @@
 {
-  "name": "mini-react",
+  "name": "last-act",
   "version": "1.0.0",
-  "description": "A minimal React-like library with useState and useEffect",
-  "main": "last.js",
+  "description": "A minimal React-like library with useState and useEffect - part of last-js",
+  "main": "last.act.js",
   "scripts": {
     "start": "serve . -p 3000",
     "dev": "serve . -p 3000"

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>last.js — a tiny, readable React</title>
-<meta name="description" content="last.js — a tiny, deliberately-readable reimplementation of React's core ideas. Read the annotated source: components, useState, useEffect, useContext, and a DOM reconciler in under 500 lines.">
+<title>last.act — a tiny, readable React</title>
+<meta name="description" content="last.act — a tiny, deliberately-readable reimplementation of React's core ideas. Part of last-js. Read the annotated source: components, useState, useEffect, useContext, and a DOM reconciler in under 500 lines.">
 <meta name="theme-color" content="#fbfaf7">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23bf3c11'/%3E%3Ctext x='32' y='44' font-family='ui-monospace,Menlo,monospace' font-size='34' font-weight='700' fill='%23fff' text-anchor='middle'%3El%3C/text%3E%3C/svg%3E">
 <style>
@@ -195,27 +195,27 @@
 <body>
 
 <header class="topbar">
-  <span class="brand">last<span class="dot">.js</span></span>
+  <span class="brand">last<span class="dot">.act</span></span>
   <nav>
     <a href="#overview" class="hide-sm">Overview</a>
     <a href="#source">Annotated source</a>
     <a href="demo.html">Demo</a>
-    <a href="https://github.com/incrementallair/last-js" class="gh">GitHub ↗</a>
+    <a href="https://github.com/incrementallair/last-act" class="gh">GitHub ↗</a>
   </nav>
 </header>
 
 <main>
 
   <section class="hero">
-    <h1>last<span class="dot">.js</span></h1>
+    <h1>last<span class="dot">.act</span></h1>
     <p class="tagline">A tiny, readable reimplementation of React's core ideas.</p>
     <p class="sub">Components, <b>useState</b>, <b>useEffect</b>, <b>useContext</b>, and a DOM reconciler — under
-      500 lines, no build step, plain ES modules. Read <code>last.js</code> end to end and you've seen the spine
+      500 lines, no build step, plain ES modules. Read <code>last.act.js</code> end to end and you've seen the spine
       of React. Below: the whole file, with its comments lifted out and set alongside the code they describe.</p>
     <div class="hero-actions">
       <a href="#source" class="btn btn-primary">Read the annotated source ↓</a>
       <a href="demo.html" class="btn btn-ghost">Live demo</a>
-      <a href="https://github.com/incrementallair/last-js" class="btn btn-ghost">GitHub</a>
+      <a href="https://github.com/incrementallair/last-act" class="btn btn-ghost">GitHub</a>
     </div>
     <div class="codeblock hero-code" id="hero-snippet"></div>
     <p class="hero-cap">A component is a plain function that returns an element — the same <code>{ type, props }</code>
@@ -231,7 +231,7 @@
       <div class="overview-body">
         <p class="eyebrow">How it works</p>
         <div class="prose" id="overview-body">
-          <p style="color:var(--ink-3)">Loading <code>last.js</code>…</p>
+          <p style="color:var(--ink-3)">Loading <code>last.act.js</code>…</p>
         </div>
       </div>
     </div>
@@ -240,7 +240,7 @@
   <section class="section" id="source" style="padding-bottom:clamp(40px,7vw,72px)">
     <div class="source-inner">
       <div class="source-head">
-        <h2>last.js, annotated</h2>
+        <h2>last.act.js, annotated</h2>
         <div class="right">
           <span id="source-meta"></span>
           <span class="toggle" role="group" aria-label="View mode">
@@ -261,9 +261,9 @@
 
   <section class="cta">
     <h2>The whole library fits in your head.</h2>
-    <p>Read it, fork it, break it. Then go read React's source and recognise the shape.</p>
+    <p>Read it, fork it, break it, extend it.</p>
     <div class="hero-actions">
-      <a href="https://github.com/incrementallair/last-js" class="btn btn-primary">Get it on GitHub</a>
+      <a href="https://github.com/incremental-code/last-act" class="btn btn-primary">Get it on GitHub</a>
       <a href="demo.html" class="btn btn-ghost">See the demo</a>
     </div>
   </section>
@@ -271,14 +271,14 @@
 </main>
 
 <footer class="sitefoot">
-  <span>last<span class="dot" style="color:var(--accent)">.js</span> — a teaching reimplementation of React. MIT licensed.</span>
-  <span><a href="https://github.com/incrementallair/last-js">github.com/incrementallair/last-js</a></span>
+  <span>last<span class="dot" style="color:var(--accent)">.act</span> — part of last-js. A teaching reimplementation of React. MIT licensed.</span>
+  <span><a href="https://github.com/incremental-code/last-act">github.com/incremental-code/last-act</a></span>
 </footer>
 
 <script type="module">
-// ── Homepage renderer for last.js ─────────────────────────────────────────────
+// ── Homepage renderer for last.act ────────────────────────────────────────────
 //
-// Fetch last.js at runtime, split it into comment / code "chunks", and render
+// Fetch last.act.js at runtime, split it into comment / code "chunks", and render
 // the comments as one vertical stream on the left and all the code as one
 // stream on the right. The two columns are independent — they have different
 // heights and would normally desync — so a scroll handler runs them at
@@ -286,8 +286,8 @@
 // so that the section's first and last lines stay aligned across both columns
 // while the middle drifts predictably.
 
-const GH      = 'https://github.com/incrementallair/last-js';
-const RAW_URL = GH + '/blob/main/last.js';
+const GH      = 'https://github.com/incrementallair/last-act';
+const RAW_URL = GH + '/blob/main/last.act.js';
 
 // ── tiny helpers ──────────────────────────────────────────────────────────────
 const esc  = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -569,7 +569,7 @@ const $ = id => document.getElementById(id);
 // hero snippet (rendered with the same highlighter)
 (() => {
   const snippet = [
-    "import { createElement, useState } from './last.js';",
+    "import { createElement, useState } from './last.act.js';",
     "import { button } from './html.js';",
     "",
     "const Counter = () => {",
@@ -585,13 +585,13 @@ const $ = id => document.getElementById(id);
 (async () => {
   let src;
   try {
-    const res = await fetch(new URL('last.js', document.baseURI), { cache: 'no-cache' });
+    const res = await fetch(new URL('last.act.js', document.baseURI), { cache: 'no-cache' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     src = await res.text();
   } catch (err) {
-    const msg = '<div class="load-error" style="grid-column:1/-1">Couldn\'t load <code>last.js</code> (' +
+    const msg = '<div class="load-error" style="grid-column:1/-1">Couldn\'t load <code>last.act.js</code> (' +
       esc(String(err.message || err)) + '). This page reads the source over HTTP — run <code>npm start</code> and ' +
-      'open <code>http://localhost:3000</code>, or <a href="' + RAW_URL + '">read <code>last.js</code> on GitHub</a>.</div>';
+      'open <code>http://localhost:3000</code>, or <a href="' + RAW_URL + '">read <code>last.act.js</code> on GitHub</a>.</div>';
     $('literate').innerHTML = msg;
     $('overview-body').innerHTML = '';
     return;

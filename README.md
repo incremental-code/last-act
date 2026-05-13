@@ -1,7 +1,7 @@
-# LastJS
+# Last.act
 
 A tiny, deliberately-readable reimplementation of React's core ideas — no build
-step, plain ES modules. The goal is pedagogical: if you read [`last.js`](last.js)
+step, plain ES modules. Part of the **last-js** collection. The goal is pedagogical: if you read [`last.act.js`](last.act.js)
 end to end you've seen the spine of React (components, `useState`, `useEffect`,
 `useContext`, and a DOM reconciler), with none of the scheduling cleverness.
 
@@ -12,7 +12,7 @@ npm install
 npm start         # serves on http://localhost:3000
 ```
 
-`http://localhost:3000` is the homepage — it loads [`last.js`](last.js) at runtime and
+`http://localhost:3000` (or `https://lastjs.org`) is the homepage — it loads [`last.act.js`](last.act.js) at runtime and
 shows the whole file with its comments lifted out and set alongside the code they
 describe. The live demo (the components in [`app.js`](app.js)) is at
 [`/demo.html`](demo.html).
@@ -24,7 +24,7 @@ same `{ type, props }` description JSX compiles to. You build elements with
 `createElement(type, props, ...children)`:
 
 ```js
-import { createElement, useState } from './last.js';
+import { createElement, useState } from './last.act.js';
 import { button } from './html.js';
 
 const Counter = () => {
@@ -41,7 +41,7 @@ typo-checking.
 Mount a root component into the DOM:
 
 ```js
-import { createRoot, createElement } from './last.js';
+import { createRoot, createElement } from './last.act.js';
 import { App } from './app.js';
 
 const root = createRoot(document.querySelector('#root'));
@@ -55,7 +55,7 @@ root.render(createElement(App));
 2. `render()` runs every function component and splices its returned element in
    place of the component element, leaving a tree of pure *host* elements (DOM
    tags only).
-3. In parallel, LastJS keeps a **shadow tree** with the same shape that *does*
+3. In parallel, Last.act keeps a **shadow tree** with the same shape that *does*
    persist between renders. Each shadow node owns the `useState` / `useEffect` /
    context slots for one position in the tree. (React calls this the fiber tree.)
 4. `diff()` walks the new host-element tree against the previous one and makes
@@ -115,7 +115,7 @@ This is a teaching implementation, not a React replacement. Notably:
 
 | Path | Purpose |
 | --- | --- |
-| `last.js` | Core library (heavily commented — start here) |
+| `last.act.js` | Core library (heavily commented — start here) |
 | `index.html` | Homepage with annotated source viewer |
 | `demo.html` | Live demo page |
 | `demo.js` | Demo entry point (mounts `<App>` into `demo.html`) |
