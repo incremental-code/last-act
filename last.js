@@ -142,7 +142,7 @@ class RootContainer {
         // elements plus the parallel shadow tree. Passing `this.prevShadow` is
         // what carries state forward; `null` is the root component's parent.
         const [renderedElement, shadow] = this.renderComponent(
-            element.type, element.props, this.prevShadow, null
+            element.type, element.props, this.prevShadow, null, element.key
         );
 
         // COMMIT: reconcile the real DOM against the previous host-element tree.
@@ -177,11 +177,13 @@ class RootContainer {
     //
     // Returns `[resolvedElement, shadow]` — `resolvedElement` is the host element
     // the component returned, with any nested components inside it already resolved.
-    renderComponent(type, props, prevShadow, parentShadow) {
+    renderComponent(type, props, prevShadow, parentShadow, key = null) {
         // New shadow node for this render — but adopt the *same* state/effects/
         // context arrays the previous shadow used. They're shared by reference, so
         // the slots (and the values the previous setState closed over) stay live.
-        const shadow = makeShadow(props?.key ?? null, parentShadow);
+        // `key` is passed in separately because createElement lifts it off props
+        // onto the element itself, so it isn't on `props` anymore.
+        const shadow = makeShadow(key, parentShadow);
         shadow.state   = prevShadow?.state   ?? [];
         shadow.effects = prevShadow?.effects ?? [];
         shadow.context = prevShadow?.context ?? [];
@@ -228,7 +230,7 @@ class RootContainer {
                 // Single component child — render it and splice the result back in.
                 const prevChildShadow = getPrevChildShadow(prevHostShadow, children, 0);
                 const [rendered, childShadow] = this.renderComponent(
-                    children.type, children.props, prevChildShadow, componentShadow
+                    children.type, children.props, prevChildShadow, componentShadow, children.key
                 );
                 element.props.children     = rendered;
                 hostShadow.children[0]    = childShadow;
@@ -252,7 +254,7 @@ class RootContainer {
                 // children array in place, and record its shadow at the same index.
                 const prevChildShadow = getPrevChildShadow(prevHostShadow, child, i);
                 const [rendered, childShadow] = this.renderComponent(
-                    child.type, child.props, prevChildShadow, componentShadow
+                    child.type, child.props, prevChildShadow, componentShadow, child.key
                 );
                 children[i]           = rendered;
                 hostShadow.children[i] = childShadow;
