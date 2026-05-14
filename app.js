@@ -9,7 +9,7 @@
  * Components are plain functions returning createElement(...) trees; hooks
  * (useState/useEffect/useContext) are called unconditionally at the top of each.
  */
-import { createElement, useState, useEffect, createContext, useContext } from './last.act.js';
+import { createElement, useState, useEffect, createContext, useContext } from './src/index.js';
 import { div, span, button, h1, h2, p, ul, li } from './html.js';
 
 const lightTheme = `background-color: white; color: black;`;

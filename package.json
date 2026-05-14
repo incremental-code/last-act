@@ -2,15 +2,30 @@
   "name": "last-act",
   "version": "1.0.0",
   "description": "A minimal React-like library with useState and useEffect - part of last-js",
-  "main": "last.act.js",
+  "main": "src/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
   "scripts": {
     "start": "serve . -p 3000",
-    "dev": "serve . -p 3000"
+    "dev": "serve . -p 3000",
+    "test": "node --test \"src/tests/*.test.js\""
   },
-  "keywords": ["react", "virtual-dom", "hooks", "useState", "useEffect"],
+  "keywords": [
+    "react",
+    "virtual-dom",
+    "hooks",
+    "useState",
+    "useEffect"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "jsdom": "^29.1.1",
     "serve": "^14.2.1"
+  },
+  "dependencies": {
+    "terser": "^5.47.1"
   }
-} 
+}
