@@ -1,0 +1,12 @@
+{
+  "name": "zero",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A minimal signal-based UI framework",
+  "scripts": {
+    "test": "node zero.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
