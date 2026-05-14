@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zero Patterns Examples</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .section h2 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #444;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+
+    .section h3 {
+      margin: 15px 0 10px 0;
+      color: #666;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    button {
+      padding: 8px 16px;
+      margin: 4px 4px 4px 0;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    input, textarea, select {
+      padding: 8px;
+      margin: 4px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    input[type="checkbox"], input[type="radio"] {
+      margin-right: 4px;
+    }
+
+    label {
+      display: block;
+      margin: 8px 0 4px 0;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .error {
+      color: #d32f2f;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .item {
+      padding: 10px;
+      margin: 4px 0;
+      background: #f9f9f9;
+      border-left: 3px solid #007bff;
+      border-radius: 2px;
+    }
+
+    .item.done {
+      opacity: 0.6;
+      text-decoration: line-through;
+    }
+
+    .counter-display {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 10px 0;
+      color: #007bff;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .stat-box {
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+    }
+
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      z-index: 1000;
+      min-width: 300px;
+    }
+
+    .tabs-nav {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .tabs-nav button {
+      margin: 0;
+      background: transparent;
+      color: #666;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tabs-nav button.active {
+      color: #007bff;
+      border-bottom-color: #007bff;
+    }
+
+    .accordion-item {
+      border: 1px solid #ddd;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .accordion-item button {
+      width: 100%;
+      text-align: left;
+      padding: 12px;
+      margin: 0;
+      border-radius: 0;
+      background: #f9f9f9;
+    }
+
+    .accordion-item button:hover {
+      background: #f0f0f0;
+    }
+
+    .accordion-content {
+      padding: 12px;
+      border-top: 1px solid #ddd;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #007bff;
+      transition: width 0.3s ease;
+    }
+
+    .color-preview {
+      width: 100px;
+      height: 100px;
+      border-radius: 4px;
+      border: 2px solid #ddd;
+      margin: 10px 0;
+    }
+
+    .list-container {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .code-note {
+      background: #f0f0f0;
+      padding: 8px 12px;
+      border-left: 3px solid #666;
+      margin: 10px 0;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 Zero Patterns Examples</h1>
+  <div id="app"></div>
+
+  <script type="module">
+    import { Signal, createElement as h } from './zero.js';
+
+    // ============================================================================
+    // BASICS - Forms & Conditionals
+    // ============================================================================
+
+    function FormExample() {
+      const email = new Signal('');
+      const password = new Signal('');
+      const emailError = new Signal('');
+      const isSubmitting = new Signal(false);
+
+      function validateEmail(value) {
+        if (!value) return 'Email is required';
+        if (!value.includes('@')) return 'Invalid email format';
+        return '';
+      }
+
+      email.subscribe((value) => {
+        emailError.set(validateEmail(value));
+      });
+
+      const emailInput = h('input', {
+        type: 'email',
+        value: email.get(),
+        onchange: (e) => email.set(e.target.value),
+        disabled: isSubmitting
+      });
+
+      const passwordInput = h('input', {
+        type: 'password',
+        value: password.get(),
+        onchange: (e) => password.set(e.target.value),
+        disabled: isSubmitting
+      });
+
+      const submitButton = h('button', {
+        type: 'submit',
+        disabled: isSubmitting.get(),
+        textContent: isSubmitting.get() ? 'Submitting...' : 'Submit'
+      });
+
+      isSubmitting.subscribe(() => {
+        emailInput.disabled = isSubmitting.get();
+        passwordInput.disabled = isSubmitting.get();
+        submitButton.disabled = isSubmitting.get();
+        submitButton.textContent = isSubmitting.get() ? 'Submitting...' : 'Submit';
+      });
+
+      function handleSubmit(e) {
+        e.preventDefault();
+        if (!emailError.get()) {
+          isSubmitting.set(true);
+          setTimeout(() => {
+            alert(`Submitted: ${email.get()}`);
+            email.set('');
+            password.set('');
+            emailInput.value = '';
+            passwordInput.value = '';
+            isSubmitting.set(false);
+          }, 500);
+        }
+      }
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Forms Pattern'),
+        h('form', { onsubmit: handleSubmit },
+          h('div', { attributes: { class: 'form-group' } },
+            h('label', {}, 'Email'),
+            emailInput,
+            emailError.get() ? h('div', { attributes: { class: 'error' } }, emailError.get()) : null
+          ),
+          h('div', { attributes: { class: 'form-group' } },
+            h('label', {}, 'Password'),
+            passwordInput
+          ),
+          submitButton
+        )
+      );
+    }
+
+    // ============================================================================
+    // LOCAL STATE - Counter, Toggle, Modal
+    // ============================================================================
+
+    function CounterComponent() {
+      const count = new Signal(0);
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Local State - Counter'),
+        h('div', { attributes: { class: 'counter-display' } }, 'Count: ', count),
+        h('button', { onclick: () => count.set(count.get() + 1) }, 'Increment'),
+        h('button', { onclick: () => count.set(count.get() - 1) }, 'Decrement'),
+        h('button', { onclick: () => count.set(0) }, 'Reset')
+      );
+    }
+
+    function ToggleComponent() {
+      const isOpen = new Signal(false);
+
+      const button = h('button', {
+        onclick: () => isOpen.set(!isOpen.get()),
+        textContent: 'Show'
+      });
+
+      const content = h('div', { attributes: { class: 'item' }, style: { display: 'none' } }, 'Secret content revealed!');
+
+      isOpen.subscribe(() => {
+        button.textContent = isOpen.get() ? 'Hide' : 'Show';
+        content.style.display = isOpen.get() ? 'block' : 'none';
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Local State - Toggle'),
+        button,
+        content
+      );
+    }
+
+    function ModalComponent() {
+      const isOpen = new Signal(false);
+
+      function close() {
+        isOpen.set(false);
+      }
+
+      const openButton = h('button', { onclick: () => isOpen.set(true) }, 'Open Modal');
+
+      const modal = h('div', { style: { display: 'none' } },
+        h('div', { attributes: { class: 'modal-overlay' }, onclick: close }),
+        h('div', { attributes: { class: 'modal' } },
+          h('h3', {}, 'Modal Title'),
+          h('p', {}, 'This is a modal dialog.'),
+          h('button', { onclick: close }, 'Close')
+        )
+      );
+
+      isOpen.subscribe(() => {
+        modal.style.display = isOpen.get() ? 'block' : 'none';
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Local State - Modal'),
+        openButton,
+        modal
+      );
+    }
+
+    // ============================================================================
+    // DERIVED STATE - Full Name, Stats
+    // ============================================================================
+
+    function DerivedStateComponent() {
+      const firstName = new Signal('John');
+      const lastName = new Signal('Doe');
+      const fullName = new Signal(`${firstName.get()} ${lastName.get()}`);
+
+      firstName.subscribe(() => {
+        fullName.set(`${firstName.get()} ${lastName.get()}`);
+      });
+
+      lastName.subscribe(() => {
+        fullName.set(`${firstName.get()} ${lastName.get()}`);
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Derived State'),
+        h('div', { attributes: { class: 'form-group' } },
+          h('label', {}, 'First Name'),
+          h('input', {
+            type: 'text',
+            value: firstName,
+            onchange: (e) => firstName.set(e.target.value)
+          })
+        ),
+        h('div', { attributes: { class: 'form-group' } },
+          h('label', {}, 'Last Name'),
+          h('input', {
+            type: 'text',
+            value: lastName,
+            onchange: (e) => lastName.set(e.target.value)
+          })
+        ),
+        h('p', {}, 'Full Name: ', h('strong', {}, fullName))
+      );
+    }
+
+    // ============================================================================
+    // TWO-WAY BINDING - Color Picker
+    // ============================================================================
+
+    function TwoWayBindingComponent() {
+      const selectedColor = new Signal('red');
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Two-Way Binding'),
+        h('label', {}, 'Select Color'),
+        h('select', {
+          value: selectedColor,
+          onchange: (e) => selectedColor.set(e.target.value)
+        },
+          h('option', { value: 'red' }, 'Red'),
+          h('option', { value: 'green' }, 'Green'),
+          h('option', { value: 'blue' }, 'Blue'),
+          h('option', { value: 'purple' }, 'Purple')
+        ),
+        h('div', {
+          attributes: { class: 'color-preview' },
+          style: { background: selectedColor }
+        })
+      );
+    }
+
+    // ============================================================================
+    // COMPUTED PROPERTIES - List Stats
+    // ============================================================================
+
+    function ComputedPropertiesComponent() {
+      const items = new Signal([
+        { id: 1, price: 10 },
+        { id: 2, price: 20 },
+        { id: 3, price: 30 }
+      ]);
+
+      const total = new Signal(items.get().reduce((sum, item) => sum + item.price, 0));
+      const count = new Signal(items.get().length);
+      const average = new Signal(count.get() > 0 ? total.get() / count.get() : 0);
+
+      items.subscribe(() => {
+        const list = items.get();
+        const newTotal = list.reduce((sum, item) => sum + item.price, 0);
+        const newCount = list.length;
+        total.set(newTotal);
+        count.set(newCount);
+        average.set(newCount > 0 ? newTotal / newCount : 0);
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Computed Properties - Stats'),
+        h('div', { attributes: { class: 'stats' } },
+          h('div', { attributes: { class: 'stat-box' } },
+            h('div', { attributes: { class: 'stat-label' } }, 'Total'),
+            h('div', { attributes: { class: 'stat-value' } }, '$', total)
+          ),
+          h('div', { attributes: { class: 'stat-box' } },
+            h('div', { attributes: { class: 'stat-label' } }, 'Count'),
+            h('div', { attributes: { class: 'stat-value' } }, count)
+          ),
+          h('div', { attributes: { class: 'stat-box' } },
+            h('div', { attributes: { class: 'stat-label' } }, 'Average'),
+            h('div', { attributes: { class: 'stat-value' } }, '$', average)
+          )
+        )
+      );
+    }
+
+    // ============================================================================
+    // CONDITIONAL RENDERING - Status Display
+    // ============================================================================
+
+    function ConditionalComponent() {
+      const status = new Signal('idle'); // idle | loading | success | error
+      const data = new Signal(null);
+
+      const fetchButton = h('button', { disabled: status.get() === 'loading' }, 'Fetch Data');
+      const contentDiv = h('div', {}, '');
+
+      async function fetchData() {
+        status.set('loading');
+        fetchButton.disabled = true;
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          data.set({ message: 'Data fetched successfully!' });
+          status.set('success');
+        } catch (err) {
+          status.set('error');
+        }
+      }
+
+      fetchButton.onclick = fetchData;
+
+      function updateContent() {
+        const s = status.get();
+        contentDiv.innerHTML = '';
+
+        if (s === 'loading') {
+          contentDiv.textContent = 'Loading...';
+        } else if (s === 'success') {
+          contentDiv.textContent = data.get().message;
+          contentDiv.setAttribute('class', 'item');
+        } else if (s === 'error') {
+          contentDiv.textContent = 'Error loading data';
+          contentDiv.setAttribute('class', 'error');
+        }
+      }
+
+      status.subscribe(() => {
+        fetchButton.disabled = status.get() === 'loading';
+        updateContent();
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Conditionals'),
+        fetchButton,
+        contentDiv
+      );
+    }
+
+    // ============================================================================
+    // MEMOIZATION / DEBOUNCING - Search
+    // ============================================================================
+
+    function DebounceComponent() {
+      const searchQuery = new Signal('');
+      const searchResults = new Signal([]);
+      const allItems = ['Apple', 'Banana', 'Apricot', 'Blueberry', 'Avocado', 'Blackberry'];
+
+      let debounceTimer = null;
+
+      const searchInput = h('input', {
+        type: 'text',
+        placeholder: 'Search items...',
+        value: '',
+        oninput: (e) => searchQuery.set(e.target.value)
+      });
+
+      const resultsList = h('ul', {});
+
+      function performSearch() {
+        const query = searchQuery.get().toLowerCase();
+        const results = query
+          ? allItems.filter(item => item.toLowerCase().includes(query))
+          : allItems;
+        searchResults.set(results);
+
+        // Update the list
+        resultsList.innerHTML = '';
+        results.forEach(item => {
+          resultsList.appendChild(h('li', {}, item));
+        });
+      }
+
+      // Initial render - show all items
+      performSearch();
+
+      searchQuery.subscribe(() => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(performSearch, 300);
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Memoization - Debounced Search'),
+        searchInput,
+        resultsList
+      );
+    }
+
+    // ============================================================================
+    // LAZY RENDERING - Tabs
+    // ============================================================================
+
+    function TabsComponent() {
+      const activeTab = new Signal(0);
+
+      const tabs = [
+        { label: 'Tab 1', content: 'This is content for tab 1' },
+        { label: 'Tab 2', content: 'This is content for tab 2' },
+        { label: 'Tab 3', content: 'This is content for tab 3' }
+      ];
+
+      const tabButtons = tabs.map((tab, i) =>
+        h('button', {
+          onclick: () => activeTab.set(i),
+          attributes: { class: activeTab.get() === i ? 'active' : '' }
+        }, tab.label)
+      );
+
+      const tabContentDiv = h('div', {}, tabs[activeTab.get()].content);
+
+      activeTab.subscribe(() => {
+        // Update active button
+        tabButtons.forEach((btn, i) => {
+          btn.setAttribute('class', activeTab.get() === i ? 'active' : '');
+        });
+        // Update content
+        tabContentDiv.textContent = tabs[activeTab.get()].content;
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Lazy Rendering - Tabs'),
+        h('div', { attributes: { class: 'tabs-nav' } }, ...tabButtons),
+        tabContentDiv
+      );
+    }
+
+    // ============================================================================
+    // BATCHING UPDATES - Accordion
+    // ============================================================================
+
+    function AccordionComponent() {
+      const expandedItems = new Signal(new Set());
+
+      const items = [
+        { id: 'a', title: 'Accordion 1', content: 'Content for item 1' },
+        { id: 'b', title: 'Accordion 2', content: 'Content for item 2' },
+        { id: 'c', title: 'Accordion 3', content: 'Content for item 3' }
+      ];
+
+      const contentDivs = {};
+
+      function toggle(id) {
+        const current = new Set(expandedItems.get());
+        if (current.has(id)) {
+          current.delete(id);
+        } else {
+          current.add(id);
+        }
+        expandedItems.set(current);
+      }
+
+      const accordionItems = items.map(item => {
+        const contentDiv = h('div', { attributes: { class: 'accordion-content' }, style: { display: 'none' } }, item.content);
+        contentDivs[item.id] = contentDiv;
+
+        return h('div', { attributes: { class: 'accordion-item' } },
+          h('button', {
+            onclick: () => toggle(item.id)
+          }, item.title),
+          contentDiv
+        );
+      });
+
+      expandedItems.subscribe(() => {
+        items.forEach(item => {
+          contentDivs[item.id].style.display = expandedItems.get().has(item.id) ? 'block' : 'none';
+        });
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Batching Updates - Accordion'),
+        h('div', {}, ...accordionItems)
+      );
+    }
+
+    // ============================================================================
+    // LISTS WITH KEYS - Todo List
+    // ============================================================================
+
+    function TodoListComponent() {
+      const todos = new Signal([
+        { id: 1, text: 'Learn Zero', done: false },
+        { id: 2, text: 'Build something', done: false }
+      ]);
+
+      const todoElements = new Signal([]);
+
+      function renderTodos() {
+        return todos.get().map(todo =>
+          h('div', {
+            attributes: {
+              class: `item ${todo.done ? 'done' : ''}`,
+              'data-id': todo.id
+            }
+          },
+            h('input', {
+              type: 'checkbox',
+              checked: todo.done,
+              onchange: (e) => {
+                const current = todos.get();
+                todos.set(current.map(t => t.id === todo.id ? { ...t, done: e.target.checked } : t));
+              }
+            }),
+            h('span', {}, todo.text),
+            h('button', {
+              onclick: () => {
+                const current = todos.get();
+                todos.set(current.filter(t => t.id !== todo.id));
+              }
+            }, '✕')
+          )
+        );
+      }
+
+      todoElements.set(renderTodos());
+
+      todos.subscribe(() => {
+        todoElements.set(renderTodos());
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Lists with Keys - Todos'),
+        h('div', {
+          attributes: { class: 'list-container' },
+          key: (el) => el.getAttribute('data-id')
+        }, todoElements),
+        h('button', {
+          onclick: () => {
+            const current = todos.get();
+            const newId = Math.max(...current.map(t => t.id), 0) + 1;
+            todos.set([...current, { id: newId, text: `New todo ${newId}`, done: false }]);
+          }
+        }, 'Add Todo')
+      );
+    }
+
+    // ============================================================================
+    // GLOBAL STATE - Theme & Notifications
+    // ============================================================================
+
+    const globalTheme = new Signal('light');
+    const globalNotifications = new Signal([]);
+    let nextNotificationId = 1;
+
+    function NotificationCenter() {
+      const notificationElements = new Signal([]);
+
+      globalNotifications.subscribe(() => {
+        const notifs = globalNotifications.get();
+        notificationElements.set(
+          notifs.map((notif) =>
+            h('div', {
+              attributes: {
+                class: 'item',
+                'data-id': notif.id
+              },
+              style: { background: notif.type === 'error' ? '#ffebee' : '#e8f5e9' }
+            },
+              notif.message,
+              h('button', {
+                onclick: () => {
+                  const current = globalNotifications.get();
+                  globalNotifications.set(current.filter(n => n.id !== notif.id));
+                }
+              }, '✕')
+            )
+          )
+        );
+      });
+
+      return h('div', { attributes: { class: 'section' } },
+        h('h2', {}, 'Global State - Notifications'),
+        h('button', {
+          onclick: () => {
+            const current = globalNotifications.get();
+            globalNotifications.set([...current, { id: nextNotificationId++, type: 'success', message: 'Success!' }]);
+          }
+        }, 'Add Success'),
+        h('button', {
+          onclick: () => {
+            const current = globalNotifications.get();
+            globalNotifications.set([...current, { id: nextNotificationId++, type: 'error', message: 'Error!' }]);
+          }
+        }, 'Add Error'),
+        h('div', {
+          attributes: { class: 'list-container' },
+          key: (el) => el.getAttribute('data-id')
+        }, notificationElements)
+      );
+    }
+
+    // ============================================================================
+    // MAIN APP
+    // ============================================================================
+
+    function App() {
+      return h('div', {},
+        FormExample(),
+        CounterComponent(),
+        ToggleComponent(),
+        ModalComponent(),
+        DerivedStateComponent(),
+        TwoWayBindingComponent(),
+        ComputedPropertiesComponent(),
+        ConditionalComponent(),
+        DebounceComponent(),
+        TabsComponent(),
+        AccordionComponent(),
+        TodoListComponent(),
+        NotificationCenter()
+      );
+    }
+
+    const app = document.getElementById('app');
+    app.appendChild(App());
+  </script>
+</body>
+</html>
