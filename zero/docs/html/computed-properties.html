@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Computed Properties - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Computed Properties</h1>
+<p>Creating and caching derived values that depend on other signals.</p>
+<h2>Basic Computed Value</h2>
+<pre><code class="language-js">const x = new Signal(5);
+const y = new Signal(3);
+const sum = new Signal(x.get() + y.get());
+
+x.subscribe(() => sum.set(x.get() + y.get()));
+y.subscribe(() => sum.set(x.get() + y.get()));
+
+x.set(10); // sum becomes 13</code></pre>
+<h2>Computed Helper</h2>
+<p>Create a reusable pattern:</p>
+<pre><code class="language-js">function computed(computeFn, dependencies) {
+  const signal = new Signal(computeFn());
+
+  dependencies.forEach(dep => {
+    dep.subscribe(() => {
+      signal.set(computeFn());
+    });
+  });
+
+  return signal;
+}
+
+// Usage
+const x = new Signal(5);
+const y = new Signal(3);
+const sum = computed(() => x.get() + y.get(), [x, y]);
+const product = computed(() => x.get() * y.get(), [x, y]);</code></pre>
+<h2>Computed with Dependencies</h2>
+<pre><code class="language-js">const firstName = new Signal('John');
+const lastName = new Signal('Doe');
+
+const fullName = computed(
+  () => `${firstName.get()} ${lastName.get()}`,
+  [firstName, lastName]
+);
+
+const initials = computed(
+  () => fullName.get().split(' ').map(n => n[0]).join('.'),
+  [fullName]
+);</code></pre>
+<h2>Memoized Computed Value</h2>
+<p>Only recompute if dependencies actually changed:</p>
+<pre><code class="language-js">class ComputedSignal {
+  constructor(computeFn, dependencies) {
+    this.computeFn = computeFn;
+    this.signal = new Signal(computeFn());
+    this.lastDeps = dependencies.map(d => d.get());
+
+    dependencies.forEach(dep => {
+      dep.subscribe(() => {
+        const newDeps = dependencies.map(d => d.get());
+        
+        // Only recompute if something changed
+        if (JSON.stringify(newDeps) !== JSON.stringify(this.lastDeps)) {
+          this.lastDeps = newDeps;
+          this.signal.set(this.computeFn());
+        }
+      });
+    });
+  }
+
+  get() {
+    return this.signal.get();
+  }
+
+  subscribe(fn) {
+    return this.signal.subscribe(fn);
+  }
+}
+
+// Usage
+const items = new Signal([
+  { id: 1, done: false },
+  { id: 2, done: true }
+]);
+
+const doneCount = new ComputedSignal(
+  () => items.get().filter(i => i.done).length,
+  [items]
+);</code></pre>
+<h2>Conditional Computed</h2>
+<pre><code class="language-js">const user = new Signal(null);
+const isAdmin = new Signal(false);
+
+user.subscribe(() => {
+  const u = user.get();
+  isAdmin.set(u && u.role === 'admin');
+});
+
+const canDelete = computed(
+  () => isAdmin.get() ? true : false,
+  [isAdmin]
+);</code></pre>
+<h2>Transformed Array</h2>
+<pre><code class="language-js">const items = new Signal([
+  { id: 1, price: 10 },
+  { id: 2, price: 20 }
+]);
+
+const total = computed(
+  () => items.get().reduce((sum, item) => sum + item.price, 0),
+  [items]
+);
+
+const averagePrice = computed(
+  () => {
+    const list = items.get();
+    return list.length > 0 ? total.get() / list.length : 0;
+  },
+  [items, total]
+);</code></pre>
+<h2>Filtered and Mapped</h2>
+<pre><code class="language-js">const todos = new Signal([
+  { id: 1, title: 'Task 1', done: false },
+  { id: 2, title: 'Task 2', done: true },
+  { id: 3, title: 'Task 3', done: false }
+]);
+
+const activeTodos = computed(
+  () => todos.get().filter(t => !t.done),
+  [todos]
+);
+
+const todoTitles = computed(
+  () => activeTodos.get().map(t => t.title),
+  [activeTodos]
+);</code></pre>
+<h2>Computed with Validation</h2>
+<pre><code class="language-js">const email = new Signal('');
+const password = new Signal('');
+
+const isFormValid = computed(
+  () => {
+    const e = email.get();
+    const p = password.get();
+    return e.includes('@') && p.length >= 8;
+  },
+  [email, password]
+);
+
+const submitButton = createElement('button', {
+  disabled: isFormValid,
+  textContent: 'Submit'
+});</code></pre>
+<h2>Nested Computed Values</h2>
+<pre><code class="language-js">const user = new Signal({
+  name: 'John',
+  address: {
+    city: 'NYC',
+    country: 'USA'
+  }
+});
+
+const city = computed(() => user.get().address.city, [user]);
+const country = computed(() => user.get().address.country, [user]);
+
+const location = computed(
+  () => `${city.get()}, ${country.get()}`,
+  [city, country]
+);</code></pre>
+<h2>Computed with Side Effects</h2>
+<pre><code class="language-js">const count = new Signal(0);
+
+const doubled = computed(() => count.get() * 2, [count]);
+
+// Side effect: log when doubled changes
+doubled.subscribe(() => {
+  console.log('Doubled is now:', doubled.get());
+  // Could trigger animations, API calls, etc.
+});</code></pre>
+<h2>Asynchronous Computed Values</h2>
+<pre><code class="language-js">const userId = new Signal(1);
+const userData = new Signal(null);
+const isLoading = new Signal(false);
+
+userId.subscribe(async () => {
+  isLoading.set(true);
+  try {
+    const response = await fetch(`/api/users/${userId.get()}`);
+    const data = await response.json();
+    userData.set(data);
+  } finally {
+    isLoading.set(false);
+  }
+});</code></pre>
+<h2>Computed with Caching</h2>
+<pre><code class="language-js">class CachedComputed {
+  constructor(computeFn, dependencies) {
+    this.computeFn = computeFn;
+    this.cache = new Map();
+    this.signal = new Signal(computeFn());
+
+    dependencies.forEach(dep => {
+      dep.subscribe(() => {
+        const cacheKey = JSON.stringify(dependencies.map(d => d.get()));
+        
+        if (this.cache.has(cacheKey)) {
+          this.signal.set(this.cache.get(cacheKey));
+        } else {
+          const result = computeFn();
+          this.cache.set(cacheKey, result);
+          this.signal.set(result);
+        }
+      });
+    });
+  }
+
+  get() {
+    return this.signal.get();
+  }
+
+  subscribe(fn) {
+    return this.signal.subscribe(fn);
+  }
+
+  clearCache() {
+    this.cache.clear();
+  }
+}</code></pre>
+<h2>Computed Getters</h2>
+<pre><code class="language-js">class Store {
+  constructor() {
+    this.items = new Signal([]);
+    this.filter = new Signal('');
+  }
+
+  get filteredItems() {
+    return computed(
+      () => this.items.get().filter(item => 
+        item.name.includes(this.filter.get())
+      ),
+      [this.items, this.filter]
+    );
+  }
+
+  get itemCount() {
+    return computed(
+      () => this.items.get().length,
+      [this.items]
+    );
+  }
+
+  get isEmpty() {
+    return computed(
+      () => this.itemCount.get() === 0,
+      [this.itemCount]
+    );
+  }
+}</code></pre>
+<h2>Reactive Sum/Average Pattern</h2>
+<pre><code class="language-js">function createListStats(items, valueExtractor) {
+  const sum = computed(
+    () => items.get().reduce((acc, item) => acc + valueExtractor(item), 0),
+    [items]
+  );
+
+  const count = computed(
+    () => items.get().length,
+    [items]
+  );
+
+  const average = computed(
+    () => count.get() > 0 ? sum.get() / count.get() : 0,
+    [sum, count]
+  );
+
+  return { sum, count, average };
+}
+
+// Usage
+const prices = new Signal([
+  { item: 'Apple', price: 1.50 },
+  { item: 'Banana', price: 0.75 }
+]);
+
+const stats = createListStats(prices, item => item.price);
+
+const display = createElement('div', {},
+  `Total: ${stats.sum}`,
+  `Average: ${stats.average.toFixed(2)}`
+);</code></pre>
+<h2>Performance: When to Use Computed</h2>
+<p>Use computed when:</p>
+<ul>
+<li>The derivation is <strong>expensive</strong> (filtering, sorting, mapping large arrays)</li>
+<li>The value is <strong>used multiple times</strong> (avoid recomputing)</li>
+<li>The value is <strong>observed by multiple subscribers</strong> (updates propagate once)</li>
+</ul>
+<p>Avoid when:</p>
+<ul>
+<li>The computation is <strong>trivial</strong> (simple addition, comparison)</li>
+<li>The value is <strong>rarely used</strong> (caching overhead exceeds cost)</li>
+<li>The value is <strong>only used once</strong> (inline the computation)</li>
+</ul>
+    </main>
+  </div>
+</body>
+</html>

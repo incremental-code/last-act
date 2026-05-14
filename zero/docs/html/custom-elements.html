@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Custom Elements - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Custom Elements</h1>
+<p>Using web components and custom elements with Zero.</p>
+<h2>Defining a Web Component</h2>
+<pre><code class="language-js">class MyButton extends HTMLElement {
+  connectedCallback() {
+    this.render();
+  }
+
+  set label(value) {
+    this._label = value;
+    this.render();
+  }
+
+  get label() {
+    return this._label;
+  }
+
+  render() {
+    this.innerHTML = `<button>${this._label}</button>`;
+  }
+}
+
+customElements.define('my-button', MyButton);</code></pre>
+<h2>Using Web Components with Zero</h2>
+<p>Pass props directly to web components:</p>
+<pre><code class="language-js">const buttonLabel = new Signal('Click me');
+
+const button = createElement('my-button', {
+  label: buttonLabel
+});
+
+buttonLabel.set('Now click me');</code></pre>
+<h2>Web Component with Reactive Props</h2>
+<pre><code class="language-js">class ReactiveCounter extends HTMLElement {
+  connectedCallback() {
+    this._count = 0;
+    this.render();
+  }
+
+  set count(value) {
+    this._count = value;
+    this.render();
+  }
+
+  get count() {
+    return this._count;
+  }
+
+  increment() {
+    this.count = this._count + 1;
+    this.dispatchEvent(new CustomEvent('count-changed', { detail: this._count }));
+  }
+
+  render() {
+    this.innerHTML = `
+      <div>
+        <p>Count: ${this._count}</p>
+        <button id="inc">Increment</button>
+      </div>
+    `;
+    
+    this.querySelector('#inc')?.addEventListener('click', () => this.increment());
+  }
+}
+
+customElements.define('reactive-counter', ReactiveCounter);
+
+// Use with Zero
+const counter = new Signal(0);
+
+const component = createElement('reactive-counter', {
+  count: counter
+});
+
+component.addEventListener('count-changed', (e) => {
+  counter.set(e.detail);
+});</code></pre>
+<h2>Emitting Custom Events</h2>
+<pre><code class="language-js">class DataInput extends HTMLElement {
+  connectedCallback() {
+    const input = document.createElement('input');
+    input.addEventListener('change', (e) => {
+      this.dispatchEvent(new CustomEvent('data-changed', {
+        detail: e.target.value,
+        bubbles: true,
+        composed: true
+      }));
+    });
+    this.appendChild(input);
+  }
+}
+
+customElements.define('data-input', DataInput);
+
+// Use with Zero
+const data = new Signal('');
+
+const input = createElement('data-input', {});
+
+input.addEventListener('data-changed', (e) => {
+  data.set(e.detail);
+});</code></pre>
+<h2>Shadow DOM Components</h2>
+<pre><code class="language-js">class StyledBox extends HTMLElement {
+  connectedCallback() {
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          padding: 20px;
+          border: 2px solid #ccc;
+        }
+      </style>
+      <slot></slot>
+    `;
+  }
+}
+
+customElements.define('styled-box', StyledBox);
+
+// Use with Zero
+const box = createElement('styled-box', {},
+  'Content inside the box'
+);</code></pre>
+<h2>Slot-Based Composition</h2>
+<pre><code class="language-js">class Card extends HTMLElement {
+  connectedCallback() {
+    this.innerHTML = `
+      <div class="card">
+        <div class="header">
+          <slot name="header"></slot>
+        </div>
+        <div class="body">
+          <slot name="body"></slot>
+        </div>
+      </div>
+    `;
+  }
+}
+
+customElements.define('my-card', Card);
+
+// Use with Zero
+const card = createElement('my-card', {},
+  createElement('h1', { attributes: { slot: 'header' } }, 'Title'),
+  createElement('p', { attributes: { slot: 'body' } }, 'Content')
+);</code></pre>
+<h2>Controlled vs Uncontrolled Components</h2>
+<strong>Uncontrolled (Web Component manages state):</strong>
+<pre><code class="language-js">const counter = createElement('reactive-counter', {});
+
+counter.addEventListener('count-changed', (e) => {
+  console.log('Count is now:', e.detail);
+});</code></pre>
+<strong>Controlled (Zero manages state):</strong>
+<pre><code class="language-js">const count = new Signal(0);
+
+function renderCounter() {
+  const counter = createElement('reactive-counter', {
+    count: count.get()
+  });
+
+  counter.addEventListener('count-changed', (e) => {
+    count.set(e.detail);
+  });
+
+  return counter;
+}
+
+const counterElement = new Signal(renderCounter());
+
+count.subscribe(() => {
+  counterElement.set(renderCounter());
+});</code></pre>
+<h2>Form Control Web Component</h2>
+<pre><code class="language-js">class CustomInput extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this.shadowRoot.querySelector('input').addEventListener('change', (e) => {
+      this.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+
+  set value(val) {
+    this._value = val;
+    if (this.shadowRoot) {
+      this.shadowRoot.querySelector('input').value = val;
+    }
+  }
+
+  get value() {
+    return this.shadowRoot?.querySelector('input').value || '';
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        input { padding: 8px; border: 1px solid #ccc; }
+      </style>
+      <input type="text" value="${this._value || ''}">
+    `;
+  }
+}
+
+customElements.define('custom-input', CustomInput);
+
+// Use with Zero
+const inputValue = new Signal('');
+
+const input = createElement('custom-input', {
+  value: inputValue
+});
+
+input.addEventListener('change', () => {
+  inputValue.set(input.value);
+});</code></pre>
+<h2>Attributes vs Properties</h2>
+<p>Web components accept both attributes and properties:</p>
+<pre><code class="language-js">// Set as property (preferred with Zero)
+const button = createElement('my-button', {
+  label: 'Click',
+  disabled: false
+});
+
+// Or set as attribute
+const button2 = createElement('my-button', {
+  attributes: {
+    'label': 'Click',
+    'disabled': 'true'
+  }
+});</code></pre>
+<h2>Third-Party Web Components</h2>
+<p>Using libraries like Material Web, Shoelace, etc.:</p>
+<pre><code class="language-js">// Assuming Material Web is loaded
+const button = createElement('mwc-button', {
+  label: 'Click me',
+  raised: true
+});
+
+const checkbox = createElement('mwc-checkbox', {
+  checked: false
+});
+
+const dialog = createElement('mwc-dialog', {
+  title: 'My Dialog',
+  open: false
+});</code></pre>
+<h2>Building a Composable Component Library</h2>
+<pre><code class="language-js">// components/button.js
+class ZeroButton extends HTMLElement {
+  connectedCallback() {
+    this.classList.add('zero-button');
+    this.render();
+  }
+
+  set variant(value) {
+    this._variant = value;
+    this.classList.toggle('primary', value === 'primary');
+    this.classList.toggle('secondary', value === 'secondary');
+  }
+
+  render() {
+    this.innerHTML = `<button>${this.textContent}</button>`;
+    this.querySelector('button').addEventListener('click', () => {
+      this.dispatchEvent(new CustomEvent('click-custom'));
+    });
+  }
+}
+
+customElements.define('zero-button', ZeroButton);
+
+// Usage with Zero
+const button = createElement('zero-button', {
+  variant: 'primary'
+}, 'Click me');
+
+button.addEventListener('click-custom', () => {
+  console.log('Button clicked via custom event');
+});</code></pre>
+<h2>Lifecycle Integration</h2>
+<p>Web components integrate naturally with Zero's lifecycle:</p>
+<pre><code class="language-js">function ComponentWithWebComponent() {
+  const data = new Signal(null);
+  const customComponent = createElement('data-processor', {});
+
+  // Setup listener
+  customComponent.addEventListener('data-ready', (e) => {
+    data.set(e.detail);
+  });
+
+  const container = createElement('div', {},
+    customComponent,
+    data ? createElement('div', {}, 'Processed: ', data) : null
+  );
+
+  // Cleanup
+  const originalRemove = container.remove;
+  container.remove = function() {
+    customComponent.removeEventListener('data-ready', handler);
+    originalRemove.call(this);
+  };
+
+  return container;
+}</code></pre>
+<h2>Performance: Web Components with Zero</h2>
+<p>Web components work efficiently with Zero because:</p>
+<ul>
+<li>✓ No vDOM overhead — Web components manage their own DOM</li>
+<li>✓ Custom events propagate through Zero</li>
+<li>✓ Props bind directly without serialization</li>
+<li>✓ Shadow DOM encapsulation doesn't conflict</li>
+</ul>
+<p>Considerations:</p>
+<ul>
+<li>⚠ Some web components may re-render unnecessarily</li>
+<li>⚠ Attribute/property serialization can be slow for large objects</li>
+<li>⚠ Custom events may bubble unexpectedly</li>
+</ul>
+<p>Use web components for:</p>
+<ul>
+<li><strong>Complex UI controls</strong> (date pickers, data grids)</li>
+<li><strong>Third-party integrations</strong> (analytics, payments)</li>
+<li><strong>Design system components</strong> (buttons, forms)</li>
+<li><strong>Reusable across frameworks</strong> (library distribution)</li>
+</ul>
+    </main>
+  </div>
+</body>
+</html>

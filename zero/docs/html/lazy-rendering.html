@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lazy Rendering - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Lazy Rendering</h1>
+<p>Deferring DOM creation until needed to improve performance and reduce memory usage.</p>
+<h2>Render on Demand</h2>
+<p>Only create elements when they become visible:</p>
+<pre><code class="language-js">function LazyTabs({ tabs }) {
+  const activeTab = new Signal(0);
+  const renderedTabs = new Signal(new Set([0])); // Track which tabs have been rendered
+
+  function getTabContent(index) {
+    const rendered = renderedTabs.get();
+    if (!rendered.has(index)) {
+      const newSet = new Set(rendered);
+      newSet.add(index);
+      renderedTabs.set(newSet);
+    }
+
+    if (activeTab.get() === index) {
+      return tabs[index].render(); // Call render function only when needed
+    }
+    return null;
+  }
+
+  return createElement('div', {},
+    createElement('nav', {},
+      ...tabs.map((tab, i) =>
+        createElement('button', {
+          onclick: () => activeTab.set(i),
+          attributes: { class: activeTab.get() === i ? 'active' : '' }
+        }, tab.label)
+      )
+    ),
+    createElement('div', {},
+      ...tabs.map((_, i) => getTabContent(i))
+    )
+  );
+}
+
+// Usage
+const tabs = [
+  { label: 'Tab 1', render: () => createElement('div', {}, 'Tab 1 expensive content') },
+  { label: 'Tab 2', render: () => createElement('div', {}, 'Tab 2 expensive content') }
+];
+
+const app = LazyTabs({ tabs });</code></pre>
+<h2>Virtual Scrolling</h2>
+<p>Only render visible list items:</p>
+<pre><code class="language-js">function VirtualList({ items, itemHeight = 30, containerHeight = 300 }) {
+  const scrollTop = new Signal(0);
+
+  function getVisibleRange() {
+    const top = scrollTop.get();
+    const bottom = top + containerHeight;
+    const startIndex = Math.floor(top / itemHeight);
+    const endIndex = Math.ceil(bottom / itemHeight);
+    return [startIndex, Math.min(endIndex, items.length)];
+  }
+
+  function renderVisibleItems() {
+    const [start, end] = getVisibleRange();
+    const offsetTop = start * itemHeight;
+
+    return createElement('div', {
+      style: { paddingTop: offsetTop }
+    },
+      ...items.slice(start, end).map((item, i) =>
+        createElement('div', {
+          style: { height: itemHeight }
+        }, item)
+      )
+    );
+  }
+
+  const visibleContent = new Signal(renderVisibleItems());
+
+  return createElement('div', {
+    style: { height: containerHeight, overflow: 'auto' },
+    onscroll: (e) => {
+      scrollTop.set(e.target.scrollTop);
+      visibleContent.set(renderVisibleItems());
+    }
+  }, visibleContent);
+}</code></pre>
+<h2>Intersection Observer</h2>
+<p>Render when element enters viewport:</p>
+<pre><code class="language-js">function LazyImage({ src, alt }) {
+  const isVisible = new Signal(false);
+  const img = createElement('img', {
+    alt,
+    style: { opacity: isVisible ? 1 : 0 }
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        img.src = src;
+        isVisible.set(true);
+        observer.unobserve(img);
+      }
+    });
+  });
+
+  observer.observe(img);
+
+  return img;
+}
+
+function LazySection({ render }) {
+  const isVisible = new Signal(false);
+  const content = new Signal(null);
+  const container = createElement('div', {});
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !isVisible.get()) {
+        isVisible.set(true);
+        content.set(render());
+        observer.unobserve(container);
+      }
+    });
+  });
+
+  observer.observe(container);
+
+  return createElement('div', {},
+    container,
+    content
+  );
+}</code></pre>
+<h2>Progressive Rendering</h2>
+<p>Render critical content first, then enhance:</p>
+<pre><code class="language-js">function App() {
+  const isMounted = new Signal(false);
+  const isDeferredReady = new Signal(false);
+
+  setTimeout(() => {
+    isMounted.set(true);
+  }, 0);
+
+  setTimeout(() => {
+    isDeferredReady.set(true);
+  }, 1000);
+
+  return createElement('div', {},
+    // Always render
+    Header(),
+    
+    // Render after mount
+    isMounted.get() ? MainContent() : null,
+    
+    // Render after deferred delay
+    isDeferredReady.get() ? ExpensiveFeature() : null
+  );
+}</code></pre>
+<h2>Pagination Instead of Infinite Scroll</h2>
+<p>Render pages on demand:</p>
+<pre><code class="language-js">function PaginatedList({ allItems, itemsPerPage = 20 }) {
+  const currentPage = new Signal(0);
+
+  function getPageItems() {
+    const start = currentPage.get() * itemsPerPage;
+    const end = start + itemsPerPage;
+    return allItems.slice(start, end);
+  }
+
+  const visibleItems = new Signal(getPageItems());
+
+  currentPage.subscribe(() => {
+    visibleItems.set(getPageItems());
+  });
+
+  return createElement('div', {},
+    createElement('ul', {},
+      ...visibleItems.get().map(item => createElement('li', {}, item))
+    ),
+    createElement('button', {
+      onclick: () => currentPage.set(currentPage.get() + 1),
+      disabled: (currentPage.get() + 1) * itemsPerPage >= allItems.length
+    }, 'Load More')
+  );
+}</code></pre>
+<h2>Delayed Rendering</h2>
+<p>Render after a timeout to unblock the main thread:</p>
+<pre><code class="language-js">function withLazyRender(Component, delay = 0) {
+  return (props) => {
+    const isReady = new Signal(delay === 0);
+
+    if (delay > 0) {
+      setTimeout(() => isReady.set(true), delay);
+    }
+
+    return isReady.get() ? Component(props) : createElement('div', {}, 'Loading...');
+  };
+}
+
+const LazyComponent = withLazyRender(ExpensiveComponent, 100);</code></pre>
+<h2>Request Idle Callback</h2>
+<p>Render when browser is idle:</p>
+<pre><code class="language-js">function withIdleRender(Component) {
+  return (props) => {
+    const isReady = new Signal(false);
+
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => isReady.set(true));
+    } else {
+      // Fallback
+      setTimeout(() => isReady.set(true), 0);
+    }
+
+    return isReady.get() ? Component(props) : createElement('div', {}, 'Loading...');
+  };
+}</code></pre>
+<h2>Memory Cleanup</h2>
+<p>Clean up elements you're not rendering:</p>
+<pre><code class="language-js">function LazyModal() {
+  const isOpen = new Signal(false);
+  let modalElement = null;
+
+  const toggle = () => {
+    if (!isOpen.get()) {
+      // Create element on open
+      modalElement = createElement('div', { attributes: { class: 'modal' } }, 'Modal content');
+      document.body.appendChild(modalElement);
+      isOpen.set(true);
+    } else {
+      // Remove element on close
+      modalElement?.remove();
+      modalElement = null;
+      isOpen.set(false);
+    }
+  };
+
+  return createElement('button', { onclick: toggle }, 'Toggle Modal');
+}</code></pre>
+<h2>Performance Considerations</h2>
+<strong>Virtual Scrolling</strong> is best for:
+<ul>
+<li>Long lists (100+ items)</li>
+<li>Items with complex content</li>
+<li>Smooth scrolling requirement</li>
+</ul>
+<strong>Pagination</strong> is better for:
+<ul>
+<li>Clear page boundaries</li>
+<li>API-paginated data</li>
+<li>Predictable load times</li>
+</ul>
+<strong>Lazy Tabs</strong> works well for:
+<ul>
+<li>Heavy per-tab content</li>
+<li>Few tabs (avoid lazy with 20+ tabs)</li>
+<li>User doesn't switch tabs frequently</li>
+</ul>
+<strong>Intersection Observer</strong> is ideal for:
+<ul>
+<li>Images and media</li>
+<li>Below-the-fold content</li>
+<li>Tracking analytics</li>
+</ul>
+    </main>
+  </div>
+</body>
+</html>

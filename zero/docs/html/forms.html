@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forms - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Forms</h1>
+<p>Handling form inputs, validation, and submission with Zero.</p>
+<h2>Simple Input Binding</h2>
+<p>Use signals to track input values:</p>
+<pre><code class="language-js">const email = new Signal('');
+
+const input = createElement('input', {
+  value: email,
+  onchange: (e) => email.set(e.target.value)
+});</code></pre>
+<h2>Text Input</h2>
+<pre><code class="language-js">const username = new Signal('');
+
+const form = createElement('form', {},
+  createElement('label', {}, 'Username'),
+  createElement('input', {
+    type: 'text',
+    value: username,
+    onchange: (e) => username.set(e.target.value)
+  }),
+  createElement('p', {}, 'You entered: ', username)
+);</code></pre>
+<h2>Textarea</h2>
+<pre><code class="language-js">const message = new Signal('');
+
+const textarea = createElement('textarea', {
+  value: message,
+  onchange: (e) => message.set(e.target.value)
+});</code></pre>
+<h2>Select Dropdown</h2>
+<pre><code class="language-js">const selectedColor = new Signal('red');
+
+const select = createElement('select', {
+  value: selectedColor,
+  onchange: (e) => selectedColor.set(e.target.value)
+},
+  createElement('option', { value: 'red' }, 'Red'),
+  createElement('option', { value: 'blue' }, 'Blue'),
+  createElement('option', { value: 'green' }, 'Green')
+);</code></pre>
+<h2>Checkbox</h2>
+<pre><code class="language-js">const agreed = new Signal(false);
+
+const checkbox = createElement('input', {
+  type: 'checkbox',
+  checked: agreed,
+  onchange: (e) => agreed.set(e.target.checked)
+});</code></pre>
+<h2>Radio Buttons</h2>
+<pre><code class="language-js">const choice = new Signal('a');
+
+const radios = createElement('div', {},
+  createElement('label', {},
+    createElement('input', {
+      type: 'radio',
+      name: 'choice',
+      value: 'a',
+      checked: choice.get() === 'a',
+      onchange: () => choice.set('a')
+    }),
+    'Option A'
+  ),
+  createElement('label', {},
+    createElement('input', {
+      type: 'radio',
+      name: 'choice',
+      value: 'b',
+      checked: choice.get() === 'b',
+      onchange: () => choice.set('b')
+    }),
+    'Option B'
+  )
+);</code></pre>
+<h2>Form Submission</h2>
+<pre><code class="language-js">const email = new Signal('');
+const password = new Signal('');
+const isSubmitting = new Signal(false);
+
+function handleSubmit(e) {
+  e.preventDefault();
+  isSubmitting.set(true);
+  
+  fetch('/api/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: email.get(),
+      password: password.get()
+    })
+  })
+    .then(r => r.json())
+    .then(data => {
+      console.log('Success:', data);
+    })
+    .catch(err => {
+      console.error('Error:', err);
+    })
+    .finally(() => {
+      isSubmitting.set(false);
+    });
+}
+
+const form = createElement('form', {
+  onsubmit: handleSubmit
+},
+  createElement('input', {
+    type: 'email',
+    value: email,
+    onchange: (e) => email.set(e.target.value),
+    disabled: isSubmitting
+  }),
+  createElement('input', {
+    type: 'password',
+    value: password,
+    onchange: (e) => password.set(e.target.value),
+    disabled: isSubmitting
+  }),
+  createElement('button', {
+    type: 'submit',
+    disabled: isSubmitting,
+    textContent: isSubmitting.get() ? 'Submitting...' : 'Submit'
+  })
+);
+
+isSubmitting.subscribe(() => {
+  const btn = form.querySelector('button');
+  btn.textContent = isSubmitting.get() ? 'Submitting...' : 'Submit';
+});</code></pre>
+<h2>Form Validation</h2>
+<pre><code class="language-js">const email = new Signal('');
+const emailError = new Signal('');
+
+function validateEmail(value) {
+  if (!value) return 'Email is required';
+  if (!value.includes('@')) return 'Invalid email format';
+  return '';
+}
+
+email.subscribe((value) => {
+  emailError.set(validateEmail(value));
+});
+
+const form = createElement('div', {},
+  createElement('input', {
+    type: 'email',
+    value: email,
+    onchange: (e) => email.set(e.target.value)
+  }),
+  createElement('span', {
+    textContent: emailError,
+    attributes: { class: 'error' }
+  })
+);</code></pre>
+<h2>Multi-Field Form Object</h2>
+<pre><code class="language-js">const formData = new Signal({
+  name: '',
+  email: '',
+  message: ''
+});
+
+function updateField(field, value) {
+  const current = formData.get();
+  formData.set({ ...current, [field]: value });
+}
+
+const form = createElement('form', {},
+  createElement('input', {
+    type: 'text',
+    placeholder: 'Name',
+    value: formData.get().name,
+    onchange: (e) => updateField('name', e.target.value)
+  }),
+  createElement('input', {
+    type: 'email',
+    placeholder: 'Email',
+    value: formData.get().email,
+    onchange: (e) => updateField('email', e.target.value)
+  }),
+  createElement('textarea', {
+    placeholder: 'Message',
+    value: formData.get().message,
+    onchange: (e) => updateField('message', e.target.value)
+  })
+);</code></pre>
+<h2>Reset Form</h2>
+<pre><code class="language-js">const email = new Signal('');
+const password = new Signal('');
+
+function resetForm() {
+  email.set('');
+  password.set('');
+}
+
+const form = createElement('form', {},
+  // ... input fields ...
+  createElement('button', { type: 'reset', onclick: resetForm }, 'Clear')
+);</code></pre>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Local State - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Local State</h1>
+<p>Managing state within a component or isolated scope.</p>
+<h2>Counter Component</h2>
+<p>The simplest local state pattern—a signal created within a component:</p>
+<pre><code class="language-js">function Counter() {
+  const count = new Signal(0);
+
+  return createElement('div', {},
+    createElement('p', {}, 'Count: ', count),
+    createElement('button', {
+      onclick: () => count.set(count.get() + 1)
+    }, 'Increment')
+  );
+}
+
+const counter = Counter();
+document.body.appendChild(counter);</code></pre>
+<h2>Toggle Component</h2>
+<pre><code class="language-js">function Toggle({ initialState = false }) {
+  const isOpen = new Signal(initialState);
+
+  return createElement('div', {},
+    createElement('button', {
+      onclick: () => isOpen.set(!isOpen.get()),
+      textContent: isOpen.get() ? 'Close' : 'Open'
+    }),
+    createElement('div', {
+      style: { display: isOpen.get() ? 'block' : 'none' }
+    }, 'Collapsed content')
+  );
+}</code></pre>
+<h2>Form Component</h2>
+<pre><code class="language-js">function LoginForm() {
+  const email = new Signal('');
+  const password = new Signal('');
+  const errors = new Signal({});
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    
+    const newErrors = {};
+    if (!email.get()) newErrors.email = 'Email required';
+    if (!password.get()) newErrors.password = 'Password required';
+    
+    errors.set(newErrors);
+    
+    if (Object.keys(newErrors).length === 0) {
+      console.log('Form submitted:', { email: email.get(), password: password.get() });
+      email.set('');
+      password.set('');
+    }
+  }
+
+  return createElement('form', { onsubmit: handleSubmit },
+    createElement('div', {},
+      createElement('label', {}, 'Email'),
+      createElement('input', {
+        type: 'email',
+        value: email,
+        onchange: (e) => email.set(e.target.value)
+      }),
+      errors.get().email ? createElement('span', { attributes: { class: 'error' } }, errors.get().email) : null
+    ),
+    createElement('div', {},
+      createElement('label', {}, 'Password'),
+      createElement('input', {
+        type: 'password',
+        value: password,
+        onchange: (e) => password.set(e.target.value)
+      }),
+      errors.get().password ? createElement('span', { attributes: { class: 'error' } }, errors.get().password) : null
+    ),
+    createElement('button', { type: 'submit' }, 'Login')
+  );
+}</code></pre>
+<h2>Modal Component</h2>
+<pre><code class="language-js">function Modal({ title, onClose }) {
+  const isOpen = new Signal(true);
+
+  function close() {
+    isOpen.set(false);
+    onClose?.();
+  }
+
+  return createElement('div', {
+    style: { display: isOpen.get() ? 'block' : 'none' }
+  },
+    createElement('div', { attributes: { class: 'modal-overlay' }, onclick: close }),
+    createElement('div', { attributes: { class: 'modal' } },
+      createElement('h2', {}, title),
+      createElement('button', { onclick: close }, 'Close')
+    )
+  );
+}</code></pre>
+<h2>Tabs Component</h2>
+<pre><code class="language-js">function Tabs({ tabs }) {
+  const activeTab = new Signal(0);
+
+  function renderTab(index) {
+    return activeTab.get() === index ? createElement('div', {}, tabs[index].content) : null;
+  }
+
+  const tabElements = tabs.map((_, index) => 
+    createElement('div', {}, renderTab(index))
+  );
+
+  activeTab.subscribe(() => {
+    tabs.forEach((_, index) => {
+      const tabDiv = tabElements[index];
+      tabDiv.innerHTML = activeTab.get() === index ? tabs[index].content : '';
+    });
+  });
+
+  return createElement('div', {},
+    createElement('div', { attributes: { class: 'tabs-nav' } },
+      ...tabs.map((tab, index) =>
+        createElement('button', {
+          onclick: () => activeTab.set(index),
+          attributes: { class: activeTab.get() === index ? 'active' : '' }
+        }, tab.label)
+      )
+    ),
+    createElement('div', { attributes: { class: 'tabs-content' } }, ...tabElements)
+  );
+}</code></pre>
+<h2>Dropdown Component</h2>
+<pre><code class="language-js">function Dropdown({ label, options }) {
+  const isOpen = new Signal(false);
+  const selected = new Signal(null);
+
+  return createElement('div', { attributes: { class: 'dropdown' } },
+    createElement('button', {
+      onclick: () => isOpen.set(!isOpen.get())
+    }, label),
+    createElement('ul', {
+      style: { display: isOpen.get() ? 'block' : 'none' }
+    },
+      ...options.map(option =>
+        createElement('li', {
+          onclick: () => {
+            selected.set(option);
+            isOpen.set(false);
+          }
+        }, option)
+      )
+    ),
+    selected ? createElement('p', {}, 'Selected: ', selected) : null
+  );
+}</code></pre>
+<h2>Pagination Component</h2>
+<pre><code class="language-js">function Pagination({ items, itemsPerPage = 10 }) {
+  const currentPage = new Signal(0);
+  
+  function getTotalPages() {
+    return Math.ceil(items.length / itemsPerPage);
+  }
+
+  function getCurrentItems() {
+    const start = currentPage.get() * itemsPerPage;
+    return items.slice(start, start + itemsPerPage);
+  }
+
+  return createElement('div', {},
+    createElement('ul', {},
+      ...getCurrentItems().map(item => createElement('li', {}, item))
+    ),
+    createElement('div', { attributes: { class: 'pagination' } },
+      createElement('button', {
+        disabled: currentPage.get() === 0,
+        onclick: () => currentPage.set(Math.max(0, currentPage.get() - 1))
+      }, 'Previous'),
+      createElement('span', {}, `Page ${currentPage.get() + 1} of ${getTotalPages()}`),
+      createElement('button', {
+        disabled: currentPage.get() >= getTotalPages() - 1,
+        onclick: () => currentPage.set(currentPage.get() + 1)
+      }, 'Next')
+    )
+  );
+}</code></pre>
+<h2>Accordion Component</h2>
+<pre><code class="language-js">function Accordion({ items }) {
+  const expandedItems = new Signal(new Set());
+
+  function toggle(index) {
+    const current = expandedItems.get();
+    if (current.has(index)) {
+      current.delete(index);
+    } else {
+      current.add(index);
+    }
+    expandedItems.set(new Set(current));
+  }
+
+  return createElement('div', { attributes: { class: 'accordion' } },
+    ...items.map((item, index) =>
+      createElement('div', { attributes: { class: 'accordion-item' } },
+        createElement('button', {
+          onclick: () => toggle(index)
+        }, item.title),
+        createElement('div', {
+          style: { display: expandedItems.get().has(index) ? 'block' : 'none' }
+        }, item.content)
+      )
+    )
+  );
+}</code></pre>
+    </main>
+  </div>
+</body>
+</html>

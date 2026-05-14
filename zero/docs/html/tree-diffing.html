@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tree Diffing - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Tree Diffing</h1>
+<p>Understanding when and how Zero efficiently updates the DOM.</p>
+<h2>No Virtual DOM, Direct Mutations</h2>
+<p>Zero doesn't use a virtual DOM. It directly mutates the real DOM:</p>
+<pre><code class="language-js">// When you update a signal, the DOM updates immediately
+const color = new Signal('red');
+const div = createElement('div', { style: { color } });
+
+color.set('blue'); // div.style.color becomes 'blue' instantly</code></pre>
+<p>This is more efficient than React's approach for:</p>
+<ul>
+<li>Single prop updates</li>
+<li>Event handlers</li>
+<li>Computed properties</li>
+</ul>
+<h2>Array Diffing with Keys</h2>
+<p>The only place Zero does diffing is with array children, using the <code>key</code> function:</p>
+<pre><code class="language-js">const items = new Signal([
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' }
+]);
+
+const list = createElement('div', {
+  key: (item) => item.id  // This is how Zero tracks identity
+}, items);
+
+items.set([
+  { id: 2, name: 'Bob' },    // Reordered
+  { id: 1, name: 'Alice' },
+  { id: 3, name: 'Charlie' } // New
+]);
+// Zero removes the node for item 3, reorders 1 and 2, adds 3</code></pre>
+<h2>Why Keys Matter</h2>
+<p>Without keys, Zero can't track which items changed:</p>
+<pre><code class="language-js">// ❌ WITHOUT KEY - Zero doesn't know what changed
+const items = new Signal(['a', 'b', 'c']);
+const list = createElement('div', {}, items);
+
+items.set(['x', 'b', 'c', 'd']);
+// Zero creates 4 new text nodes (inefficient)
+
+// ✓ WITH KEY - Zero knows exactly what changed
+const items = new Signal([
+  { id: 1, text: 'a' },
+  { id: 2, text: 'b' },
+  { id: 3, text: 'c' }
+]);
+
+const list = createElement('div', {
+  key: (item) => item.id
+}, items);
+
+items.set([
+  { id: 4, text: 'x' },     // New
+  { id: 2, text: 'b' },     // Existing
+  { id: 3, text: 'c' },     // Existing
+  { id: 5, text: 'd' }      // New
+]);
+// Zero creates nodes only for items 4 and 5</code></pre>
+<h2>Key Function Performance</h2>
+<p>The key function is called for every item on every update:</p>
+<pre><code class="language-js">// ✓ GOOD - Fast key extraction
+const key = (item) => item.id;
+
+// ✓ GOOD - Constant operation
+const key = (item) => item.id.toString();
+
+// ❌ SLOW - Complex computation
+const key = (item) => {
+  let hash = 0;
+  for (let i = 0; i < item.name.length; i++) {
+    hash = ((hash << 5) - hash) + item.name.charCodeAt(i);
+  }
+  return hash;
+};
+
+// ❌ WRONG - Generates new value every time
+const key = (item) => Math.random();</code></pre>
+<h2>Avoiding Unnecessary DOM Operations</h2>
+<p>Don't recreate signals unnecessarily:</p>
+<pre><code class="language-js">// ❌ AVOID - Creates new elements every render
+function ItemList() {
+  const items = new Signal([...]);
+  
+  function render() {
+    return items.get().map(item => createElement('div', {}, item.name));
+  }
+
+  return createElement('ul', {}, ...render());
+}
+
+// ✓ GOOD - Reuse elements via signal
+function ItemList() {
+  const items = new Signal([...]);
+  const elements = new Signal(items.get().map(item => createElement('div', {}, item.name)));
+
+  items.subscribe(() => {
+    elements.set(items.get().map(item => createElement('div', {}, item.name)));
+  });
+
+  return createElement('ul', {}, elements);
+}</code></pre>
+<h2>Keying Elements by Data Attributes</h2>
+<p>When rendering elements from objects, store the ID in a data attribute so the key function can access it:</p>
+<pre><code class="language-js">// ✓ GOOD - Store ID in data attribute for keying
+const todos = new Signal([
+  { id: 1, text: 'Learn Zero', done: false },
+  { id: 2, text: 'Build something', done: false }
+]);
+
+const todoElements = new Signal([]);
+
+function renderTodos() {
+  return todos.get().map(todo =>
+    createElement('div', {
+      attributes: {
+        class: `item ${todo.done ? 'done' : ''}`,
+        'data-id': todo.id  // Store ID for keying
+      }
+    },
+      createElement('button', {
+        onclick: () => {
+          const current = todos.get();
+          todos.set(current.filter(t => t.id !== todo.id));
+        }
+      }, '✕')
+    )
+  );
+}
+
+todoElements.set(renderTodos());
+todos.subscribe(() => {
+  todoElements.set(renderTodos());
+});
+
+// Use the data attribute in the key function
+const list = createElement('div', {
+  key: (el) => el.getAttribute('data-id')
+}, todoElements);</code></pre>
+<p>This ensures that when you add or remove items, each element is correctly identified by its ID, even after re-rendering.</p>
+<h2>When Diffing is Necessary</h2>
+<p>Zero's minimal diffing approach works best when:</p>
+<ul>
+<li><strong>Props are reactive</strong> — Changes automatically update the DOM</li>
+<li><strong>Lists are keyed</strong> — Array updates are efficient</li>
+<li><strong>Components are static</strong> — No re-renders, so no diffing needed</li>
+</ul>
+<p>You might need custom diffing when:</p>
+<ul>
+<li><strong>Content is complex</strong> — Large nested structures</li>
+<li><strong>Reordering is frequent</strong> — Heavy list manipulation</li>
+<li><strong>Items are identical</strong> — Can't use a unique key</li>
+</ul>
+<h2>Diffing Large Lists</h2>
+<p>For large lists, use efficient key functions:</p>
+<pre><code class="language-js">// List of 10,000 users
+const users = new Signal([...]);
+
+// ✓ GOOD - O(1) key lookup
+const userList = createElement('div', {
+  key: (user) => user.id
+}, users);
+
+// ❌ SLOW - O(n) key lookup
+const userList = createElement('div', {
+  key: (user) => user.email  // Email lookup requires searching
+}, users);
+
+// ❌ VERY SLOW - O(n) key generation
+const userList = createElement('div', {
+  key: (user) => `${user.firstName}-${user.lastName}`  // String concatenation
+}, users);</code></pre>
+<h2>Detecting When Diffing Occurs</h2>
+<p>Monitor list updates to understand diffing:</p>
+<pre><code class="language-js">const items = new Signal([
+  { id: 1, name: 'A' },
+  { id: 2, name: 'B' }
+]);
+
+// Listen to updates
+items.subscribe(() => {
+  console.time('List update');
+  // Zero performs diffing and DOM updates here
+  console.timeEnd('List update');
+});
+
+// This triggers a minimal update (one element added)
+items.set([
+  { id: 1, name: 'A' },
+  { id: 2, name: 'B' },
+  { id: 3, name: 'C' }  // Only this needs a new DOM node
+]);</code></pre>
+<h2>Comparing Zero's Approach to React</h2>
+<p>Zero:</p>
+<ul>
+<li>✓ No virtual DOM overhead for prop updates</li>
+<li>✓ Direct DOM mutations (faster for small changes)</li>
+<li>✓ Minimal diffing (only on array children)</li>
+<li>✗ Relies on you to structure state correctly</li>
+<li>✗ No automatic re-render optimization</li>
+</ul>
+<p>React:</p>
+<ul>
+<li>✓ Automatic re-render optimization (memoization)</li>
+<li>✓ Complex diffing algorithm (handles any tree structure)</li>
+<li>✓ Batched updates</li>
+<li>✗ Virtual DOM overhead on every update</li>
+<li>✗ Can be slower for simple changes</li>
+</ul>
+<h2>Best Practices for Diffing</h2>
+<p>1. <strong>Use stable keys</strong> — Don't use array indices or random IDs</p>
+<p>2. <strong>Normalize data</strong> — Flat structure, not deeply nested</p>
+<p>3. <strong>Subscribe selectively</strong> — Only subscribe to the signals you use</p>
+<p>4. <strong>Batch updates</strong> — Group list changes together</p>
+<p>5. <strong>Lazy render</strong> — Defer rendering large lists until visible</p>
+<h2>Pattern: Incremental Diffing</h2>
+<p>For very large lists, render in chunks:</p>
+<pre><code class="language-js">function IncrementalList({ items }) {
+  const batchSize = 50;
+  const currentBatch = new Signal(0);
+
+  function getBatchItems() {
+    const start = currentBatch.get() * batchSize;
+    const end = start + batchSize;
+    return items.get().slice(start, end);
+  }
+
+  const batchElements = new Signal(
+    getBatchItems().map(item => createElement('li', {}, item.name))
+  );
+
+  currentBatch.subscribe(() => {
+    const batch = getBatchItems();
+    if (batch.length > 0) {
+      const newElements = batch.map(item => createElement('li', {}, item.name));
+      const current = batchElements.get();
+      batchElements.set([...current, ...newElements]);
+    }
+  });
+
+  return createElement('ul', {},
+    batchElements,
+    currentBatch.get() * batchSize < items.get().length
+      ? createElement('button', {
+          onclick: () => currentBatch.set(currentBatch.get() + 1)
+        }, 'Load More')
+      : null
+  );
+}</code></pre>
+<h2>Pattern: Efficient Reordering</h2>
+<p>Preserve DOM nodes when reordering:</p>
+<pre><code class="language-js">const items = new Signal([
+  { id: 1, name: 'A' },
+  { id: 2, name: 'B' },
+  { id: 3, name: 'C' }
+]);
+
+// Zero preserves the DOM nodes for ids 1, 2, 3 and only reorders them
+const list = createElement('ul', {
+  key: (item) => item.id
+}, items);
+
+// This efficiently reorders without recreating elements
+items.set([
+  { id: 3, name: 'C' },
+  { id: 1, name: 'A' },
+  { id: 2, name: 'B' }
+]);</code></pre>
+    </main>
+  </div>
+</body>
+</html>

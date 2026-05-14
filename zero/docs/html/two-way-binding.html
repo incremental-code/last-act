@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Two-Way Binding - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Two-Way Binding</h1>
+<p>Keeping form inputs and state synchronized bidirectionally.</p>
+<h2>Simple Two-Way Binding</h2>
+<pre><code class="language-js">const name = new Signal('');
+
+const input = createElement('input', {
+  value: name,
+  onchange: (e) => name.set(e.target.value)
+});
+
+const display = createElement('div', {}, 'Name: ', name);
+
+// Changes to input update name signal
+// Changes to name signal update display</code></pre>
+<h2>Helper for Two-Way Binding</h2>
+<pre><code class="language-js">function bind(signal, element, eventType = 'onchange') {
+  // Set initial value
+  if (element.type === 'checkbox') {
+    element.checked = signal.get();
+  } else {
+    element.value = signal.get();
+  }
+
+  // Update element when signal changes
+  signal.subscribe(() => {
+    if (element.type === 'checkbox') {
+      element.checked = signal.get();
+    } else {
+      element.value = signal.get();
+    }
+  });
+
+  // Update signal when element changes
+  element.addEventListener(eventType === 'onchange' ? 'change' : eventType.slice(2), (e) => {
+    if (element.type === 'checkbox') {
+      signal.set(e.target.checked);
+    } else {
+      signal.set(e.target.value);
+    }
+  });
+
+  return element;
+}
+
+// Usage
+const email = new Signal('');
+const emailInput = createElement('input', { type: 'email' });
+bind(email, emailInput);</code></pre>
+<h2>Form Object Two-Way Binding</h2>
+<pre><code class="language-js">const formData = new Signal({
+  name: '',
+  email: '',
+  age: '',
+  agreed: false
+});
+
+function bindForm(formElement, dataSignal) {
+  const inputs = formElement.querySelectorAll('[name]');
+
+  inputs.forEach(input => {
+    const fieldName = input.name;
+    const currentData = dataSignal.get();
+
+    // Set initial value
+    if (input.type === 'checkbox') {
+      input.checked = currentData[fieldName] || false;
+    } else {
+      input.value = currentData[fieldName] || '';
+    }
+
+    // Update signal when input changes
+    input.addEventListener('change', (e) => {
+      const newData = { ...dataSignal.get() };
+      newData[fieldName] = input.type === 'checkbox' ? e.target.checked : e.target.value;
+      dataSignal.set(newData);
+    });
+  });
+
+  // Update inputs when signal changes
+  dataSignal.subscribe(() => {
+    inputs.forEach(input => {
+      const fieldName = input.name;
+      const value = dataSignal.get()[fieldName];
+      if (input.type === 'checkbox') {
+        input.checked = value || false;
+      } else {
+        input.value = value || '';
+      }
+    });
+  });
+}
+
+const form = createElement('form', {},
+  createElement('input', { name: 'name', type: 'text' }),
+  createElement('input', { name: 'email', type: 'email' }),
+  createElement('input', { name: 'age', type: 'number' }),
+  createElement('input', { name: 'agreed', type: 'checkbox' })
+);
+
+bindForm(form, formData);</code></pre>
+<h2>Real-Time Validation with Two-Way Binding</h2>
+<pre><code class="language-js">const email = new Signal('');
+const emailError = new Signal('');
+
+function validateEmail(value) {
+  if (!value) return '';
+  if (!value.includes('@')) return 'Must include @';
+  if (!value.includes('.')) return 'Must include domain';
+  return '';
+}
+
+email.subscribe((value) => {
+  emailError.set(validateEmail(value));
+});
+
+const form = createElement('div', {},
+  createElement('input', {
+    type: 'email',
+    value: email,
+    onchange: (e) => email.set(e.target.value)
+  }),
+  createElement('span', {
+    textContent: emailError,
+    attributes: { class: emailError.get() ? 'error' : '' }
+  })
+);</code></pre>
+<h2>Select Dropdown Two-Way Binding</h2>
+<pre><code class="language-js">const selectedColor = new Signal('red');
+
+const select = createElement('select', {
+  value: selectedColor,
+  onchange: (e) => selectedColor.set(e.target.value)
+},
+  createElement('option', { value: 'red' }, 'Red'),
+  createElement('option', { value: 'green' }, 'Green'),
+  createElement('option', { value: 'blue' }, 'Blue')
+);
+
+const preview = createElement('div', {
+  style: { 
+    background: selectedColor,
+    width: '100px',
+    height: '100px'
+  }
+});
+
+selectedColor.subscribe(() => {
+  preview.style.background = selectedColor.get();
+});</code></pre>
+<h2>Radio Button Group Two-Way Binding</h2>
+<pre><code class="language-js">const choice = new Signal('a');
+
+function createRadioGroup(name, options, signal) {
+  return options.map(option =>
+    createElement('label', {},
+      createElement('input', {
+        type: 'radio',
+        name,
+        value: option.value,
+        checked: signal.get() === option.value,
+        onchange: () => signal.set(option.value)
+      }),
+      option.label
+    )
+  );
+}
+
+const radioGroup = createElement('div', {},
+  ...createRadioGroup('choice', [
+    { value: 'a', label: 'Option A' },
+    { value: 'b', label: 'Option B' }
+  ], choice)
+);
+
+choice.subscribe(() => {
+  const inputs = radioGroup.querySelectorAll('input');
+  inputs.forEach(input => {
+    input.checked = input.value === choice.get();
+  });
+});</code></pre>
+<h2>Textarea Two-Way Binding</h2>
+<pre><code class="language-js">const note = new Signal('');
+
+const textarea = createElement('textarea', {
+  value: note,
+  onchange: (e) => note.set(e.target.value)
+});
+
+const preview = createElement('div', {
+  textContent: note
+});
+
+note.subscribe(() => {
+  preview.textContent = note.get();
+});</code></pre>
+<h2>Range Slider Two-Way Binding</h2>
+<pre><code class="language-js">const volume = new Signal(50);
+
+const slider = createElement('input', {
+  type: 'range',
+  min: '0',
+  max: '100',
+  value: volume,
+  onchange: (e) => volume.set(parseInt(e.target.value))
+});
+
+const volumeDisplay = createElement('span', {
+  textContent: volume.get() + '%'
+});
+
+volume.subscribe(() => {
+  slider.value = volume.get();
+  volumeDisplay.textContent = volume.get() + '%';
+});</code></pre>
+<h2>Conditional Two-Way Binding</h2>
+<p>Bind different inputs based on state:</p>
+<pre><code class="language-js">const bindingType = new Signal('text'); // 'text' | 'checkbox' | 'select'
+const value = new Signal('');
+
+function createInput() {
+  const type = bindingType.get();
+
+  if (type === 'text') {
+    return createElement('input', {
+      type: 'text',
+      value: value,
+      onchange: (e) => value.set(e.target.value)
+    });
+  } else if (type === 'checkbox') {
+    return createElement('input', {
+      type: 'checkbox',
+      checked: value,
+      onchange: (e) => value.set(e.target.checked)
+    });
+  } else if (type === 'select') {
+    return createElement('select', {
+      value: value,
+      onchange: (e) => value.set(e.target.value)
+    },
+      createElement('option', {}, 'Option 1'),
+      createElement('option', {}, 'Option 2')
+    );
+  }
+}
+
+const input = new Signal(createInput());
+
+bindingType.subscribe(() => {
+  input.set(createInput());
+});</code></pre>
+<h2>Syncing Multiple Fields</h2>
+<p>Update one field based on another:</p>
+<pre><code class="language-js">const firstName = new Signal('');
+const lastName = new Signal('');
+const fullName = new Signal('');
+
+firstName.subscribe(() => {
+  fullName.set(`${firstName.get()} ${lastName.get()}`);
+});
+
+lastName.subscribe(() => {
+  fullName.set(`${firstName.get()} ${lastName.get()}`);
+});
+
+// Also support editing fullName and splitting
+fullName.subscribe(() => {
+  const parts = fullName.get().split(' ');
+  if (parts.length === 2) {
+    firstName.set(parts[0]);
+    lastName.set(parts[1]);
+  }
+});
+
+const form = createElement('form', {},
+  createElement('input', {
+    placeholder: 'First Name',
+    value: firstName,
+    onchange: (e) => firstName.set(e.target.value)
+  }),
+  createElement('input', {
+    placeholder: 'Last Name',
+    value: lastName,
+    onchange: (e) => lastName.set(e.target.value)
+  }),
+  createElement('input', {
+    placeholder: 'Full Name',
+    value: fullName,
+    onchange: (e) => fullName.set(e.target.value)
+  })
+);</code></pre>
+<h2>Performance: Avoid Circular Updates</h2>
+<p>Be careful with circular bindings to prevent loops:</p>
+<pre><code class="language-js">// ❌ AVOID - can create loops
+const a = new Signal('a');
+const b = new Signal('b');
+
+a.subscribe(() => b.set(a.get()));
+b.subscribe(() => a.set(b.get()));
+
+a.set('x'); // Infinite loop!
+
+// ✓ GOOD - one-directional flow
+const source = new Signal('a');
+const derived = new Signal(source.get());
+
+source.subscribe(() => {
+  derived.set(source.get());
+});
+// derived doesn't update source</code></pre>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lifecycle Patterns - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Lifecycle Patterns</h1>
+<p>Managing setup, cleanup, and lifecycle events in Zero components.</p>
+<h2>Setup on Mount</h2>
+<p>Run code when a component is added to the DOM:</p>
+<pre><code class="language-js">function ComponentWithSetup() {
+  const isActive = new Signal(false);
+  const container = createElement('div', {}, 'Component');
+
+  // Setup
+  isActive.set(true);
+  console.log('Component mounted');
+
+  // Cleanup (if removed)
+  const originalRemove = container.remove;
+  container.remove = function() {
+    isActive.set(false);
+    console.log('Component unmounted');
+    originalRemove.call(this);
+  };
+
+  return container;
+}</code></pre>
+<h2>Cleanup on Unmount</h2>
+<p>Use a cleanup function to remove subscriptions:</p>
+<pre><code class="language-js">function withCleanup(componentFn) {
+  return function(...args) {
+    const cleanups = [];
+    const signal = new Signal(null);
+
+    // Track subscriptions
+    const registerCleanup = (fn) => {
+      cleanups.push(fn);
+    };
+
+    const element = componentFn(...args, registerCleanup);
+
+    // Override remove to cleanup
+    const originalRemove = element.remove;
+    element.remove = function() {
+      cleanups.forEach(cleanup => cleanup());
+      cleanups.length = 0;
+      if (originalRemove) originalRemove.call(this);
+    };
+
+    return element;
+  };
+}
+
+// Usage
+const MyComponent = withCleanup((props, cleanup) => {
+  const count = new Signal(0);
+
+  const unsubscribe = count.subscribe(() => {
+    console.log('Count changed');
+  });
+
+  cleanup(() => unsubscribe());
+
+  return createElement('div', {}, count);
+});</code></pre>
+<h2>Interval Lifecycle</h2>
+<p>Start and stop intervals:</p>
+<pre><code class="language-js">function Timer() {
+  const time = new Signal(0);
+  let intervalId = null;
+
+  const container = createElement('div', {},
+    createElement('p', {}, 'Time: ', time),
+    createElement('button', {
+      onclick: () => {
+        if (!intervalId) {
+          intervalId = setInterval(() => {
+            time.set(time.get() + 1);
+          }, 1000);
+        }
+      }
+    }, 'Start'),
+    createElement('button', {
+      onclick: () => {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }, 'Stop'),
+    createElement('button', {
+      onclick: () => {
+        time.set(0);
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }, 'Reset')
+  );
+
+  // Cleanup on remove
+  const originalRemove = container.remove;
+  container.remove = function() {
+    clearInterval(intervalId);
+    originalRemove.call(this);
+  };
+
+  return container;
+}</code></pre>
+<h2>Event Listener Lifecycle</h2>
+<p>Manage event listeners:</p>
+<pre><code class="language-js">function ResponsiveComponent() {
+  const windowWidth = new Signal(window.innerWidth);
+  const isMobile = new Signal(window.innerWidth < 768);
+
+  const handleResize = () => {
+    windowWidth.set(window.innerWidth);
+    isMobile.set(window.innerWidth < 768);
+  };
+
+  window.addEventListener('resize', handleResize);
+
+  const container = createElement('div', {},
+    createElement('p', {}, isMobile.get() ? 'Mobile' : 'Desktop')
+  );
+
+  // Update when width changes
+  windowWidth.subscribe(() => {
+    container.querySelector('p').textContent = isMobile.get() ? 'Mobile' : 'Desktop';
+  });
+
+  // Cleanup
+  const originalRemove = container.remove;
+  container.remove = function() {
+    window.removeEventListener('resize', handleResize);
+    originalRemove.call(this);
+  };
+
+  return container;
+}</code></pre>
+<h2>Timeout Lifecycle</h2>
+<p>Manage timeouts:</p>
+<pre><code class="language-js">function DelayedMessage() {
+  const message = new Signal('');
+  let timeoutId = null;
+
+  const showMessage = () => {
+    message.set('');
+    timeoutId = setTimeout(() => {
+      message.set('Delayed message!');
+    }, 2000);
+  };
+
+  const container = createElement('div', {},
+    createElement('p', {}, message),
+    createElement('button', { onclick: showMessage }, 'Show Message')
+  );
+
+  // Cleanup
+  const originalRemove = container.remove;
+  container.remove = function() {
+    clearTimeout(timeoutId);
+    originalRemove.call(this);
+  };
+
+  return container;
+}</code></pre>
+<h2>Fetch Lifecycle</h2>
+<p>Manage async requests:</p>
+<pre><code class="language-js">function DataFetcher({ url }) {
+  const data = new Signal(null);
+  const isLoading = new Signal(false);
+  const error = new Signal(null);
+  let abortController = null;
+
+  const fetch_data = async () => {
+    isLoading.set(true);
+    error.set(null);
+
+    abortController = new AbortController();
+
+    try {
+      const response = await fetch(url, {
+        signal: abortController.signal
+      });
+      const result = await response.json();
+      data.set(result);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        error.set(err.message);
+      }
+    } finally {
+      isLoading.set(false);
+    }
+  };
+
+  const container = createElement('div', {},
+    createElement('button', { onclick: fetch_data }, 'Fetch'),
+    isLoading.get() ? createElement('p', {}, 'Loading...') : null,
+    error.get() ? createElement('p', { attributes: { class: 'error' } }, error.get()) : null,
+    data.get() ? createElement('pre', {}, JSON.stringify(data.get(), null, 2)) : null
+  );
+
+  // Cleanup
+  const originalRemove = container.remove;
+  container.remove = function() {
+    abortController?.abort();
+    originalRemove.call(this);
+  };
+
+  return container;
+}</code></pre>
+<h2>Animation Lifecycle</h2>
+<p>Manage animations:</p>
+<pre><code class="language-js">function AnimatedBox() {
+  const isOpen = new Signal(false);
+  let animationId = null;
+
+  const toggle = () => {
+    isOpen.set(!isOpen.get());
+  };
+
+  const box = createElement('div', {
+    style: {
+      width: '100px',
+      height: '100px',
+      background: 'blue',
+      transition: 'all 0.3s ease'
+    }
+  });
+
+  isOpen.subscribe(() => {
+    if (isOpen.get()) {
+      box.style.width = '200px';
+      box.style.height = '200px';
+    } else {
+      box.style.width = '100px';
+      box.style.height = '100px';
+    }
+  });
+
+  const container = createElement('div', {},
+    box,
+    createElement('button', { onclick: toggle }, 'Toggle')
+  );
+
+  // Cleanup
+  const originalRemove = container.remove;
+  container.remove = function() {
+    cancelAnimationFrame(animationId);
+    originalRemove.call(this);
+  };
+
+  return container;
+}</code></pre>
+<h2>Observer Lifecycle</h2>
+<p>Manage IntersectionObserver, ResizeObserver, etc.:</p>
+<pre><code class="language-js">function ObservedElement() {
+  const isVisible = new Signal(false);
+  let observer = null;
+
+  const element = createElement('div', {
+    style: {
+      width: '100px',
+      height: '100px',
+      background: isVisible.get() ? 'green' : 'red'
+    }
+  });
+
+  // Setup observer
+  observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      isVisible.set(entry.isIntersecting);
+    });
+  });
+
+  observer.observe(element);
+
+  // Update color when visibility changes
+  isVisible.subscribe(() => {
+    element.style.background = isVisible.get() ? 'green' : 'red';
+  });
+
+  // Cleanup
+  const originalRemove = element.remove;
+  element.remove = function() {
+    observer?.disconnect();
+    originalRemove.call(this);
+  };
+
+  return element;
+}</code></pre>
+<h2>Storage Sync Lifecycle</h2>
+<p>Persist state across sessions:</p>
+<pre><code class="language-js">function PersistentCounter() {
+  const count = new Signal(parseInt(localStorage.getItem('count') || '0'));
+
+  const container = createElement('div', {},
+    createElement('p', {}, 'Count: ', count),
+    createElement('button', {
+      onclick: () => count.set(count.get() + 1)
+    }, 'Increment')
+  );
+
+  // Save to storage
+  count.subscribe((value) => {
+    localStorage.setItem('count', value);
+  });
+
+  // Sync across tabs
+  const handleStorageChange = (e) => {
+    if (e.key === 'count') {
+      count.set(parseInt(e.newValue || '0'));
+    }
+  };
+
+  window.addEventListener('storage', handleStorageChange);
+
+  // Cleanup
+  const originalRemove = container.remove;
+  container.remove = function() {
+    window.removeEventListener('storage', handleStorageChange);
+    originalRemove.call(this);
+  };
+
+  return container;
+}</code></pre>
+<h2>Lifecycle Helper</h2>
+<pre><code class="language-js">function createComponent(setupFn) {
+  return function(...args) {
+    const cleanups = [];
+    
+    const lifecycle = {
+      onCleanup: (fn) => cleanups.push(fn)
+    };
+
+    const element = setupFn(...args, lifecycle);
+
+    const originalRemove = element.remove || function() {};
+    element.remove = function() {
+      cleanups.reverse().forEach(cleanup => cleanup());
+      if (originalRemove) originalRemove.call(this);
+    };
+
+    return element;
+  };
+}
+
+// Usage
+const MyComponent = createComponent((props, { onCleanup }) => {
+  const count = new Signal(0);
+
+  const unsubscribe = count.subscribe(() => {
+    console.log('Count:', count.get());
+  });
+
+  onCleanup(() => unsubscribe());
+  onCleanup(() => console.log('Cleaned up MyComponent'));
+
+  return createElement('div', {}, count);
+});</code></pre>
+<h2>Performance: Lifecycle Cleanup</h2>
+<p>Always clean up:</p>
+<ul>
+<li><strong>Subscriptions</strong> — Prevent memory leaks</li>
+<li><strong>Event listeners</strong> — Prevent multiple listeners on elements</li>
+<li><strong>Timers</strong> — Prevent orphaned intervals/timeouts</li>
+<li><strong>Observers</strong> — Prevent memory leaks from watching elements</li>
+<li><strong>Fetch requests</strong> — Abort in-flight requests</li>
+</ul>
+<p>Clean up in reverse order of setup to avoid dependency issues.</p>
+    </main>
+  </div>
+</body>
+</html>

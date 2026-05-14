@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Global State - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Global State</h1>
+<p>Sharing state across multiple components and parts of your application.</p>
+<h2>Simple Global Store</h2>
+<p>Create a module that exports signals:</p>
+<pre><code class="language-js">// store.js
+export const user = new Signal(null);
+export const notifications = new Signal([]);
+export const theme = new Signal('light');
+
+// component.js
+import { user, theme } from './store.js';
+
+function Header() {
+  return createElement('header', {
+    style: { background: theme.get() === 'light' ? 'white' : 'black' }
+  },
+    user.get() ? `Hello, ${user.get().name}` : 'Not logged in'
+  );
+}</code></pre>
+<h2>Store Object Pattern</h2>
+<p>Encapsulate related state in an object:</p>
+<pre><code class="language-js">// store.js
+export const authStore = {
+  user: new Signal(null),
+  isLoading: new Signal(false),
+  error: new Signal(null),
+
+  async login(email, password) {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+      this.user.set(data);
+    } catch (err) {
+      this.error.set(err.message);
+    } finally {
+      this.isLoading.set(false);
+    }
+  },
+
+  logout() {
+    this.user.set(null);
+    this.error.set(null);
+  }
+};
+
+// Usage
+import { authStore } from './store.js';
+
+const loginButton = createElement('button', {
+  onclick: () => authStore.login('user@example.com', 'password'),
+  disabled: authStore.isLoading
+}, 'Login');</code></pre>
+<h2>Namespace Pattern</h2>
+<p>Organize global state by feature:</p>
+<pre><code class="language-js">// store.js
+export const store = {
+  // Auth state
+  auth: {
+    user: new Signal(null),
+    isAuthenticated: new Signal(false)
+  },
+
+  // UI state
+  ui: {
+    sidebarOpen: new Signal(true),
+    theme: new Signal('light')
+  },
+
+  // App state
+  app: {
+    items: new Signal([]),
+    loading: new Signal(false),
+    error: new Signal(null)
+  }
+};
+
+// component.js
+import { store } from './store.js';
+
+function Sidebar() {
+  return createElement('aside', {
+    style: { display: store.ui.sidebarOpen.get() ? 'block' : 'none' }
+  }, '...');
+}</code></pre>
+<h2>Computed Global State</h2>
+<p>Derive global state from other signals:</p>
+<pre><code class="language-js">export const user = new Signal(null);
+export const isAdmin = new Signal(false);
+export const username = new Signal('');
+
+user.subscribe(() => {
+  const u = user.get();
+  isAdmin.set(u?.role === 'admin');
+  username.set(u?.name || 'Guest');
+});</code></pre>
+<h2>Context Provider Pattern</h2>
+<p>Pass state through a component tree:</p>
+<pre><code class="language-js">function App() {
+  const theme = new Signal('light');
+  const user = new Signal(null);
+
+  return createElement('div', {},
+    // Pass signals as props to context-aware components
+    Header({ theme, user }),
+    Main({ theme, user }),
+    Footer({ theme, user })
+  );
+}
+
+function Header({ theme, user }) {
+  return createElement('header', {
+    style: { background: theme.get() === 'light' ? 'white' : 'black' }
+  }, 'Header');
+}</code></pre>
+<h2>Event Bus Pattern</h2>
+<p>Communicate between distant components via signals:</p>
+<pre><code class="language-js">// events.js
+export const eventBus = {
+  itemAdded: new Signal(null),
+  itemDeleted: new Signal(null),
+  userLoggedIn: new Signal(null),
+
+  emit(signal, value) {
+    signal.set(value);
+  }
+};
+
+// component-a.js
+import { eventBus } from './events.js';
+
+function AddItemButton() {
+  return createElement('button', {
+    onclick: () => {
+      eventBus.emit(eventBus.itemAdded, { id: 1, name: 'New Item' });
+    }
+  }, 'Add Item');
+}
+
+// component-b.js
+import { eventBus } from './events.js';
+
+function ItemList() {
+  const items = new Signal([]);
+
+  eventBus.itemAdded.subscribe((newItem) => {
+    if (newItem) {
+      const current = items.get();
+      items.set([...current, newItem]);
+    }
+  });
+
+  return createElement('ul', {}, ...items.get().map(item => createElement('li', {}, item.name)));
+}</code></pre>
+<h2>Local Storage Sync</h2>
+<p>Persist and restore global state:</p>
+<pre><code class="language-js">export const user = new Signal(null);
+
+// Load from localStorage
+const stored = localStorage.getItem('user');
+if (stored) {
+  user.set(JSON.parse(stored));
+}
+
+// Save to localStorage when updated
+user.subscribe((newUser) => {
+  if (newUser) {
+    localStorage.setItem('user', JSON.stringify(newUser));
+  } else {
+    localStorage.removeItem('user');
+  }
+});</code></pre>
+<h2>Multiple Store Files</h2>
+<p>For larger apps, split state by domain:</p>
+<pre><code class="language-js">src/
+  store/
+    auth.js      // user, isAuthenticated, login(), logout()
+    ui.js        // theme, sidebarOpen, notifications
+    data.js      // items, loading, error
+    api.js       // API endpoints and caching
+  components/
+    Header.js
+    Sidebar.js
+    MainContent.js</code></pre>
+<h2>Performance: Selective Subscriptions</h2>
+<p>Only subscribe to the parts you need:</p>
+<pre><code class="language-js">// ✓ GOOD - only subscribe to theme
+const Header = ({ themeStore }) => {
+  return createElement('header', {
+    style: { background: themeStore.get() === 'light' ? 'white' : 'black' }
+  });
+};
+
+// ❌ AVOID - subscribing to entire store
+const Header = ({ store }) => {
+  store.subscribe(() => {
+    // Re-render even if other parts changed
+  });
+};</code></pre>
+<h2>Notifications with Stable IDs</h2>
+<p>When rendering a list of notifications, each item needs a stable ID for proper keying:</p>
+<pre><code class="language-js">export const notifications = new Signal([]);
+let nextNotificationId = 1;
+
+function addNotification(type, message) {
+  const current = notifications.get();
+  notifications.set([
+    ...current,
+    { id: nextNotificationId++, type, message }
+  ]);
+}
+
+function removeNotification(id) {
+  const current = notifications.get();
+  notifications.set(current.filter(n => n.id !== id));
+}
+
+// In a component:
+const notificationElements = new Signal([]);
+
+notifications.subscribe(() => {
+  const notifs = notifications.get();
+  notificationElements.set(
+    notifs.map((notif) =>
+      createElement('div', {
+        attributes: {
+          class: 'notification',
+          'data-id': notif.id  // Store ID for keying
+        },
+        style: { background: notif.type === 'error' ? '#ffebee' : '#e8f5e9' }
+      },
+        notif.message,
+        createElement('button', {
+          onclick: () => removeNotification(notif.id)
+        }, '✕')
+      )
+    )
+  );
+});
+
+// Use the data attribute in the key function
+const notificationList = createElement('div', {
+  key: (el) => el.getAttribute('data-id')
+}, notificationElements);</code></pre>
+<strong>Key:</strong> Each notification gets a unique, incrementing ID that persists across renders. The key function uses this ID to track which element corresponds to which notification, ensuring correct removal and reordering.
+<h2>Testing Global State</h2>
+<p>Export a function to reset state:</p>
+<pre><code class="language-js">export function resetStore() {
+  user.set(null);
+  items.set([]);
+  notifications.set([]);
+  error.set(null);
+}
+
+// In tests
+beforeEach(() => {
+  resetStore();
+});</code></pre>
+    </main>
+  </div>
+</body>
+</html>

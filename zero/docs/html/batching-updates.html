@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Batching Updates - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Batching Updates</h1>
+<p>Grouping multiple signal changes to optimize performance and reduce render cycles.</p>
+<h2>Batch Multiple Updates</h2>
+<p>Execute multiple signal changes with only one notification round:</p>
+<pre><code class="language-js">function batch(fn) {
+  // Collect all updates
+  const updates = [];
+  const originalSubscriptions = new Map();
+
+  // Store original subscribers temporarily
+  const originalSet = Signal.prototype.set;
+  Signal.prototype.set = function(newValue) {
+    if (newValue !== this.value) {
+      this.value = newValue;
+      updates.push(() => {
+        this.subscribers.forEach(cb => cb(newValue));
+      });
+    }
+  };
+
+  try {
+    fn();
+  } finally {
+    // Restore original behavior
+    Signal.prototype.set = originalSet;
+    
+    // Execute all notifications once
+    updates.forEach(update => update());
+  }
+}
+
+// Usage
+const firstName = new Signal('John');
+const lastName = new Signal('Doe');
+const fullName = new Signal('John Doe');
+
+fullName.subscribe(() => {
+  console.log('Full name changed:', fullName.get());
+});
+
+batch(() => {
+  firstName.set('Jane');
+  lastName.set('Smith');
+  // Only one "Full name changed" log
+});</code></pre>
+<h2>Batch Form Updates</h2>
+<p>Avoid updating derived state on every keystroke:</p>
+<pre><code class="language-js">const email = new Signal('');
+const password = new Signal('');
+const formValid = new Signal(false);
+const errors = new Signal({});
+
+function validateForm() {
+  const newErrors = {};
+  if (!email.get().includes('@')) {
+    newErrors.email = 'Invalid email';
+  }
+  if (password.get().length < 8) {
+    newErrors.password = 'Password too short';
+  }
+
+  errors.set(newErrors);
+  formValid.set(Object.keys(newErrors).length === 0);
+}
+
+// Batch validation on blur
+const emailInput = createElement('input', {
+  onchange: (e) => email.set(e.target.value),
+  onblur: validateForm
+});
+
+const passwordInput = createElement('input', {
+  onchange: (e) => password.set(e.target.value),
+  onblur: validateForm
+});</code></pre>
+<h2>Batch List Operations</h2>
+<p>Update a list once instead of item by item:</p>
+<pre><code class="language-js">const items = new Signal([
+  { id: 1, name: 'Item 1', selected: false },
+  { id: 2, name: 'Item 2', selected: false }
+]);
+
+function selectMultiple(ids) {
+  const current = items.get();
+  const updated = current.map(item => ({
+    ...item,
+    selected: ids.includes(item.id)
+  }));
+  items.set(updated); // Single update
+}
+
+selectMultiple([1, 2]);</code></pre>
+<h2>Deferred State Update</h2>
+<p>Queue updates to happen later:</p>
+<pre><code class="language-js">class DeferredSignal {
+  constructor(value) {
+    this.signal = new Signal(value);
+    this.pendingUpdates = [];
+    this.isProcessing = false;
+  }
+
+  defer(fn) {
+    this.pendingUpdates.push(fn);
+  }
+
+  flush() {
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+
+    const updates = this.pendingUpdates;
+    this.pendingUpdates = [];
+
+    updates.forEach(fn => fn());
+
+    this.isProcessing = false;
+  }
+
+  get() {
+    return this.signal.get();
+  }
+
+  set(value) {
+    this.signal.set(value);
+  }
+}
+
+// Usage
+const todoList = new DeferredSignal([]);
+
+function addTodos(newTodos) {
+  const deferred = todoList;
+  newTodos.forEach(todo => {
+    deferred.defer(() => {
+      const current = deferred.get();
+      deferred.set([...current, todo]);
+    });
+  });
+  deferred.flush(); // All updates at once
+}</code></pre>
+<h2>Batch API Operations</h2>
+<pre><code class="language-js">const selectedIds = new Signal(new Set());
+const isDeleting = new Signal(false);
+
+async function deleteSelected() {
+  const ids = Array.from(selectedIds.get());
+  
+  if (ids.length === 0) return;
+
+  isDeleting.set(true);
+
+  try {
+    // Delete all items at once
+    const response = await fetch('/api/items/delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids })
+    });
+
+    if (response.ok) {
+      // Update UI once after all deletions
+      batch(() => {
+        selectedIds.set(new Set());
+        // Update items list
+        items.set(items.get().filter(item => !ids.includes(item.id)));
+      });
+    }
+  } finally {
+    isDeleting.set(false);
+  }
+}</code></pre>
+<h2>Transaction Pattern</h2>
+<p>Group related updates that should all succeed or all fail:</p>
+<pre><code class="language-js">class Transaction {
+  constructor() {
+    this.updates = [];
+    this.isActive = true;
+  }
+
+  update(signal, value) {
+    if (!this.isActive) throw new Error('Transaction is closed');
+    this.updates.push(() => signal.set(value));
+  }
+
+  commit() {
+    this.isActive = false;
+    this.updates.forEach(update => update());
+    this.updates = [];
+  }
+
+  rollback() {
+    this.isActive = false;
+    this.updates = [];
+  }
+}
+
+// Usage
+const user = new Signal(null);
+const notifications = new Signal([]);
+
+const transaction = new Transaction();
+
+try {
+  transaction.update(user, { name: 'John', email: 'john@example.com' });
+  transaction.update(notifications, [{ id: 1, message: 'User created' }]);
+  transaction.commit();
+} catch (error) {
+  transaction.rollback();
+  console.error('Transaction failed:', error);
+}</code></pre>
+<h2>Microtask Batch</h2>
+<p>Use Promise microtasks to batch updates:</p>
+<pre><code class="language-js">class BatchedSignal extends Signal {
+  constructor(value) {
+    super(value);
+    this.isBatching = false;
+    this.pendingUpdate = null;
+  }
+
+  set(newValue) {
+    this.pendingUpdate = newValue;
+
+    if (!this.isBatching) {
+      this.isBatching = true;
+      
+      // Defer to microtask queue
+      Promise.resolve().then(() => {
+        this.isBatching = false;
+        if (this.pendingUpdate !== null) {
+          super.set(this.pendingUpdate);
+          this.pendingUpdate = null;
+        }
+      });
+    }
+  }
+}
+
+// Usage
+const counter = new BatchedSignal(0);
+
+counter.set(1);
+counter.set(2);
+counter.set(3);
+// Only one notification: value goes to 3</code></pre>
+<h2>Debounced Batch Updates</h2>
+<p>Batch updates that occur rapidly:</p>
+<pre><code class="language-js">function createBatchedSignal(initialValue, delay = 0) {
+  const signal = new Signal(initialValue);
+  let timeoutId = null;
+  const pendingUpdates = [];
+
+  return {
+    get() {
+      return signal.get();
+    },
+
+    set(value) {
+      pendingUpdates.push(value);
+
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        // Apply last pending update
+        signal.set(pendingUpdates[pendingUpdates.length - 1]);
+        pendingUpdates.length = 0;
+      }, delay);
+    },
+
+    subscribe(fn) {
+      return signal.subscribe(fn);
+    }
+  };
+}
+
+const searchQuery = createBatchedSignal('', 300);
+
+// Only notifies after 300ms of inactivity
+searchQuery.set('a');
+searchQuery.set('ab');
+searchQuery.set('abc');
+// Notifies once with 'abc'</code></pre>
+<h2>Performance Benefits</h2>
+<p>Batching helps when:</p>
+<ul>
+<li><strong>Multiple dependent signals</strong> — Reduces cascading updates</li>
+<li><strong>High-frequency updates</strong> — Throttles notification calls</li>
+<li><strong>Complex derivations</strong> — Avoids recomputing multiple times</li>
+<li><strong>Large lists</strong> — Single DOM update vs many</li>
+</ul>
+<p>Batching overhead occurs with:</p>
+<ul>
+<li><strong>Single signal updates</strong> — Batching mechanism costs more than the update</li>
+<li><strong>Simple operations</strong> — The batching wrapper is slower than direct update</li>
+<li><strong>Rare updates</strong> — Complexity isn't justified</li>
+</ul>
+<p>Profile before batching. Start with simple updates and batch only hot paths.</p>
+    </main>
+  </div>
+</body>
+</html>

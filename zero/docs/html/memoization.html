@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memoization - Zero Patterns</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: #2c3e50;
+      color: white;
+      padding: 24px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      max-height: 100vh;
+      border-right: 1px solid #1a252f;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #95a5a6;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 10px 12px;
+      margin: 2px 0;
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      white-space: normal;
+      word-wrap: break-word;
+      border-left: 3px solid transparent;
+      border-radius: 0 3px 3px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      color: #3498db;
+      background: rgba(52, 152, 219, 0.15);
+      border-left-color: #3498db;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 48px;
+      background: white;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      color: #34495e;
+      margin: 32px 0 16px 0;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: #7f8c8d;
+      margin: 24px 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #34495e;
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      overflow-y: auto;
+      line-height: 1.5;
+      margin: 20px 0;
+      max-height: 500px;
+      border: 1px solid #333;
+      font-size: 13px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.7;
+      color: #34495e;
+      font-size: 15px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    em {
+      color: #555;
+      font-style: italic;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .content {
+        margin-left: 0;
+        max-height: 100vh;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        margin: 24px 0 12px 0;
+        font-size: 18px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Patterns</h2>
+      <a href="batching-updates.html" class="nav-link">Batching Updates</a>
+    <a href="computed-properties.html" class="nav-link">Computed Properties</a>
+    <a href="conditionals.html" class="nav-link">Conditionals</a>
+    <a href="custom-elements.html" class="nav-link">Custom Elements</a>
+    <a href="derived-state.html" class="nav-link">Derived State</a>
+    <a href="forms.html" class="nav-link">Forms</a>
+    <a href="global-state.html" class="nav-link">Global State</a>
+    <a href="lazy-rendering.html" class="nav-link">Lazy Rendering</a>
+    <a href="lifecycle-patterns.html" class="nav-link">Lifecycle Patterns</a>
+    <a href="local-state.html" class="nav-link">Local State</a>
+    <a href="memoization.html" class="nav-link">Memoization</a>
+    <a href="react-comparison.html" class="nav-link">React Comparison</a>
+    <a href="tree-diffing.html" class="nav-link">Tree Diffing</a>
+    <a href="two-way-binding.html" class="nav-link">Two Way Binding</a>
+    </aside>
+    <main class="content">
+      <h1>Memoization</h1>
+<p>Optimizing performance by caching expensive computations and avoiding unnecessary updates.</p>
+<h2>Memoize Computed Values</h2>
+<p>Cache the result of expensive functions:</p>
+<pre><code class="language-js">function createMemoized(fn) {
+  let cachedResult = null;
+  let cachedInput = null;
+
+  return (input) => {
+    if (input === cachedInput) {
+      return cachedResult;
+    }
+    cachedInput = input;
+    cachedResult = fn(input);
+    return cachedResult;
+  };
+}
+
+const expensiveCompute = createMemoized((n) => {
+  // Simulate heavy computation
+  let sum = 0;
+  for (let i = 0; i < n * 1000000; i++) sum += i;
+  return sum;
+});
+
+const input = new Signal(10);
+const result = new Signal(expensiveCompute(input.get()));
+
+input.subscribe(() => {
+  result.set(expensiveCompute(input.get()));
+});</code></pre>
+<h2>Memoize with Multiple Dependencies</h2>
+<pre><code class="language-js">function createMemoized(fn, getKeys) {
+  let cachedResult = null;
+  let cachedKeys = null;
+
+  return (...args) => {
+    const keys = getKeys(...args);
+    
+    if (cachedKeys && JSON.stringify(keys) === JSON.stringify(cachedKeys)) {
+      return cachedResult;
+    }
+    
+    cachedKeys = keys;
+    cachedResult = fn(...args);
+    return cachedResult;
+  };
+}
+
+const filterAndSort = createMemoized(
+  (items, query, sortBy) => {
+    const filtered = items.filter(item => item.name.includes(query));
+    return filtered.sort((a, b) => a[sortBy].localeCompare(b[sortBy]));
+  },
+  (items, query, sortBy) => [items.length, query, sortBy]
+);
+
+const items = new Signal([...]);
+const query = new Signal('');
+const sortBy = new Signal('name');
+const results = new Signal([]);
+
+function update() {
+  results.set(filterAndSort(items.get(), query.get(), sortBy.get()));
+}
+
+items.subscribe(update);
+query.subscribe(update);
+sortBy.subscribe(update);</code></pre>
+<h2>Debounced Updates</h2>
+<p>Avoid updating on every keystroke. Use <code>oninput</code> to capture changes immediately, but debounce the expensive operation:</p>
+<pre><code class="language-js">function debounce(fn, delay) {
+  let timeoutId = null;
+
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+}
+
+const searchQuery = new Signal('');
+const searchResults = new Signal([]);
+let debounceTimer = null;
+
+function performSearch() {
+  const query = searchQuery.get();
+  const results = query
+    ? items.filter(item => item.toLowerCase().includes(query.toLowerCase()))
+    : items;
+  searchResults.set(results);
+}
+
+// Use oninput for real-time signal updates
+const searchInput = createElement('input', {
+  type: 'text',
+  placeholder: 'Search...',
+  oninput: (e) => searchQuery.set(e.target.value)
+});
+
+// Debounce the actual search operation
+searchQuery.subscribe(() => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(performSearch, 300);
+});
+
+// Perform initial search
+performSearch();</code></pre>
+<strong>Key:</strong> Use <code>oninput</code> (fires on every keystroke) instead of <code>onchange</code> (fires only on blur), then debounce the expensive operation inside the subscription.
+<h2>Throttled Updates</h2>
+<p>Limit update frequency:</p>
+<pre><code class="language-js">function throttle(fn, delay) {
+  let lastTime = 0;
+
+  return (...args) => {
+    const now = Date.now();
+    if (now - lastTime >= delay) {
+      lastTime = now;
+      fn(...args);
+    }
+  };
+}
+
+const windowWidth = new Signal(window.innerWidth);
+const onResize = throttle(() => {
+  windowWidth.set(window.innerWidth);
+}, 100);
+
+window.addEventListener('resize', onResize);</code></pre>
+<h2>Lazy Computation</h2>
+<p>Only compute when needed:</p>
+<pre><code class="language-js">function createLazySignal(fn) {
+  let cached = null;
+  let isDirty = true;
+
+  return {
+    get() {
+      if (isDirty) {
+        cached = fn();
+        isDirty = false;
+      }
+      return cached;
+    },
+    
+    invalidate() {
+      isDirty = true;
+    }
+  };
+}
+
+const expensiveValue = createLazySignal(() => {
+  console.log('Computing...');
+  // Heavy computation
+  return Math.random();
+});
+
+console.log(expensiveValue.get()); // "Computing..." + value
+console.log(expensiveValue.get()); // Just returns cached value
+expensiveValue.invalidate();
+console.log(expensiveValue.get()); // "Computing..." again</code></pre>
+<h2>Batch Updates</h2>
+<p>Group multiple signal changes before subscribers react:</p>
+<pre><code class="language-js">function batch(fn) {
+  const updates = [];
+  
+  // Temporarily collect updates
+  const originalSet = Signal.prototype.set;
+  Signal.prototype.set = function(newValue) {
+    updates.push(() => originalSet.call(this, newValue));
+  };
+
+  fn();
+
+  // Restore and execute all updates
+  Signal.prototype.set = originalSet;
+  updates.forEach(update => update());
+}
+
+const first = new Signal(0);
+const last = new Signal(0);
+const fullName = new Signal('');
+
+batch(() => {
+  first.set('John');
+  last.set('Doe');
+  // fullName subscribers only fire once after this block
+});</code></pre>
+<h2>Conditional Subscription</h2>
+<p>Only subscribe when needed:</p>
+<pre><code class="language-js">const items = new Signal([]);
+const filter = new Signal('');
+let filterSubscription = null;
+
+function enableFiltering() {
+  if (!filterSubscription) {
+    filterSubscription = filter.subscribe(() => {
+      // Update filtered results
+    });
+  }
+}
+
+function disableFiltering() {
+  if (filterSubscription) {
+    filterSubscription();
+    filterSubscription = null;
+  }
+}</code></pre>
+<h2>Cache HTTP Requests</h2>
+<pre><code class="language-js">const cache = new Map();
+
+async function fetchWithCache(url) {
+  if (cache.has(url)) {
+    return cache.get(url);
+  }
+
+  const response = await fetch(url);
+  const data = await response.json();
+  cache.set(url, data);
+  return data;
+}
+
+const userId = new Signal(1);
+const user = new Signal(null);
+
+userId.subscribe(async () => {
+  user.set(await fetchWithCache(`/api/users/${userId.get()}`));
+});</code></pre>
+<h2>Signal Pooling for Transient States</h2>
+<p>Reuse signals to avoid creating new ones constantly:</p>
+<pre><code class="language-js">class SignalPool {
+  constructor(initialValue) {
+    this.signals = [];
+    this.nextIndex = 0;
+  }
+
+  acquire(value) {
+    if (this.nextIndex < this.signals.length) {
+      const signal = this.signals[this.nextIndex];
+      signal.set(value);
+      this.nextIndex++;
+      return signal;
+    } else {
+      const signal = new Signal(value);
+      this.signals.push(signal);
+      this.nextIndex++;
+      return signal;
+    }
+  }
+
+  reset() {
+    this.nextIndex = 0;
+  }
+}
+
+const pool = new SignalPool(null);
+
+function renderItems(items) {
+  pool.reset();
+  return items.map(item => {
+    const signal = pool.acquire(item);
+    return createElement('div', {}, signal);
+  });
+}</code></pre>
+<h2>Performance Note: When Memoization Helps</h2>
+<p>Memoization is valuable for:</p>
+<ul>
+<li><strong>Complex calculations</strong> — Computing on every update is expensive</li>
+<li><strong>Frequent subscriptions</strong> — Multiple components use the same derived value</li>
+<li><strong>Network requests</strong> — Avoid duplicate API calls</li>
+<li><strong>Large list filtering/sorting</strong> — Operations on thousands of items</li>
+</ul>
+<p>Memoization adds overhead for:</p>
+<ul>
+<li><strong>Simple operations</strong> — The memoization cache lookup can be slower than just recomputing</li>
+<li><strong>Rarely-used values</strong> — The cache invalidation cost outweighs benefits</li>
+<li><strong>Unique inputs</strong> — If inputs change constantly, the cache never hits</li>
+</ul>
+<p>Profile first, memoize second.</p>
+    </main>
+  </div>
+</body>
+</html>
