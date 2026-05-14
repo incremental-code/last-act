@@ -57,9 +57,16 @@ function createElement(type, props = {}, ...children) {
       } else if (child instanceof HTMLElement) {
         element.appendChild(child);
       } else if (isSignal(child)) {
-        const arraySignal = child;
-        if (Array.isArray(arraySignal.value)) {
-          renderArray(element, arraySignal, props.key);
+        // Check if signal contains an array or scalar value
+        if (Array.isArray(child.value)) {
+          renderArray(element, child, props.key);
+        } else {
+          // Handle scalar signal - create text node and update on changes
+          const textNode = document.createTextNode(child.get());
+          element.appendChild(textNode);
+          child.subscribe((newValue) => {
+            textNode.nodeValue = newValue;
+          });
         }
       }
     }

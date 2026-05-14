@@ -213,12 +213,13 @@ test('Reactive props: multiple signals on same element', () => {
   assertEquals(div.style.fontSize, '16px');
 });
 
-test('Reactive props: signal in text content via array', () => {
+test('Reactive props: scalar signal as child updates reactively', () => {
   const text = new Signal('Hello');
-  const div = createElement('div', { key: (x) => x }, text);
-  // Signal containing array renders the array contents
-  assertEquals(div.textContent, '');
-  // Non-array signals just create text nodes at creation time, not reactively
+  const div = createElement('div', {}, text);
+  assertEquals(div.textContent, 'Hello');
+
+  text.set('World');
+  assertEquals(div.textContent, 'World');
 });
 
 // Array Children Tests

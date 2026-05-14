@@ -4,9 +4,13 @@
   "type": "module",
   "description": "A minimal signal-based UI framework",
   "scripts": {
-    "test": "node zero.test.js"
+    "test": "node zero.test.js",
+    "test:patterns": "node patterns.test.js",
+    "test:all": "npm run test && npm run test:patterns",
+    "build": "node build.js"
   },
   "devDependencies": {
+    "esbuild": "^0.28.0",
     "jsdom": "^24.0.0"
   }
 }
