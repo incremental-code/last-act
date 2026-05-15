@@ -17,7 +17,9 @@ class Signal {
   set(newValue) {
     if (this.value !== newValue) {
       this.value = newValue;
-      this.subscribers.forEach(cb => cb(newValue));
+      // Snapshot subscribers so mutations during iteration don't cause re-visits
+      const subs = Array.from(this.subscribers);
+      subs.forEach(cb => cb(newValue));
     }
   }
 
@@ -45,37 +47,21 @@ function track(fn) {
 function computed(fn) {
   const result = new Signal(undefined);
   let unsubs = [];
-  let isUpdating = false;
 
   const doRecompute = () => {
-    if (isUpdating) return;
-    isUpdating = true;
+    const { value, dependencies } = track(fn);
 
-    try {
-      const tracked = track(fn);
-      const newValue = tracked.value;
-      const newDeps = tracked.dependencies;
+    // Update result via set() so subscribers are notified
+    result.set(value);
 
-      // Update result
-      result.value = newValue;
-      // Manually notify subscribers
-      const subs = Array.from(result.subscribers);
-      subs.forEach(cb => cb(newValue));
-
-      // Unsubscribe from old dependencies
-      unsubs.forEach(unsubscribe => unsubscribe());
-      unsubs = [];
-
-      // Subscribe to new dependencies
-      for (const signal of newDeps) {
-        unsubs.push(signal.subscribe(doRecompute));
-      }
-    } finally {
-      isUpdating = false;
-    }
+    // Unsubscribe from old dependencies and subscribe to new ones
+    unsubs.forEach(unsubscribe => unsubscribe());
+    unsubs = [];
+    dependencies.forEach(signal => {
+      unsubs.push(signal.subscribe(doRecompute));
+    });
   };
 
-  // Initial setup
   doRecompute();
 
   return result;

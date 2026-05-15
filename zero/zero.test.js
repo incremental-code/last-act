@@ -408,6 +408,97 @@ test('computed: creates signal with computed value', () => {
   assertEquals(sum.get(), 8);
 });
 
+test('computed: updates when dependency changes', () => {
+  const a = new Signal(5);
+  const b = new Signal(3);
+
+  const sum = computed(() => {
+    return a.get() + b.get();
+  });
+
+  assertEquals(sum.get(), 8);
+  a.set(10);
+  assertEquals(sum.get(), 13);
+  b.set(7);
+  assertEquals(sum.get(), 17);
+});
+
+test('computed: tracks only used signals', () => {
+  const a = new Signal(5);
+  const b = new Signal(3);
+  const c = new Signal(2);
+
+  const sum = computed(() => {
+    return a.get() + b.get();
+  });
+
+  assertEquals(sum.get(), 8);
+  c.set(99);
+  assertEquals(sum.get(), 8);
+});
+
+test('computed: handles complex expressions', () => {
+  const firstName = new Signal('John');
+  const lastName = new Signal('Doe');
+  const age = new Signal(30);
+
+  const profile = computed(() => {
+    return `${firstName.get()} ${lastName.get()}, age ${age.get()}`;
+  });
+
+  assertEquals(profile.get(), 'John Doe, age 30');
+  firstName.set('Jane');
+  assertEquals(profile.get(), 'Jane Doe, age 30');
+  age.set(25);
+  assertEquals(profile.get(), 'Jane Doe, age 25');
+});
+
+test('computed: returns Signal that can be used as child', () => {
+  const count = new Signal(0);
+  const doubled = computed(() => count.get() * 2);
+
+  const div = createElement('div', {}, doubled);
+  assertEquals(div.textContent, '0');
+
+  count.set(5);
+  assertEquals(div.textContent, '10');
+
+  count.set(20);
+  assertEquals(div.textContent, '40');
+});
+
+test('computed: chained computed signals', () => {
+  const count = new Signal(1);
+  const doubled = computed(() => count.get() * 2);
+  const quadrupled = computed(() => doubled.get() * 2);
+
+  assertEquals(doubled.get(), 2);
+  assertEquals(quadrupled.get(), 4);
+
+  count.set(5);
+  assertEquals(doubled.get(), 10);
+  assertEquals(quadrupled.get(), 20);
+});
+
+test('computed: notifies its own subscribers', () => {
+  const a = new Signal(1);
+  const doubled = computed(() => a.get() * 2);
+
+  let notified = 0;
+  let lastValue;
+  doubled.subscribe((v) => {
+    notified++;
+    lastValue = v;
+  });
+
+  a.set(5);
+  assertEquals(notified, 1);
+  assertEquals(lastValue, 10);
+
+  a.set(10);
+  assertEquals(notified, 2);
+  assertEquals(lastValue, 20);
+});
 
 // Summary
 console.log(`\n${'='.repeat(50)}`);
