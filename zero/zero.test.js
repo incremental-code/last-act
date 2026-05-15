@@ -334,65 +334,125 @@ test('Edge case: deeply nested structures', () => {
 });
 
 // Dependency Tracking Tests
-test('track: records signal accesses', () => {
+test('track: returns [value, deps] tuple', () => {
   const a = new Signal(1);
   const b = new Signal(2);
   const c = new Signal(3);
 
-  const tracked = track(() => {
-    a.get();
-    b.get();
+  const [value, deps] = track(() => {
+    return a.get() + b.get();
   });
 
-  assertEquals(tracked.dependencies.size, 2);
-  assert(tracked.dependencies.has(a));
-  assert(tracked.dependencies.has(b));
-  assert(!tracked.dependencies.has(c));
+  assertEquals(value, 3);
+  assert(deps instanceof Set);
+  assertEquals(deps.size, 2);
+  assert(deps.has(a));
+  assert(deps.has(b));
+  assert(!deps.has(c));
 });
 
 test('track: does not record unused signals', () => {
   const a = new Signal(1);
   const b = new Signal(2);
 
-  const tracked = track(() => {
+  const [, deps] = track(() => {
     a.get();
-    // b not accessed
   });
 
-  assertEquals(tracked.dependencies.size, 1);
-  assert(tracked.dependencies.has(a));
+  assertEquals(deps.size, 1);
+  assert(deps.has(a));
 });
 
 test('track: handles nested accesses', () => {
   const a = new Signal(1);
   const b = new Signal(2);
 
-  const tracked = track(() => {
+  const [, deps] = track(() => {
     const val = a.get();
     if (val > 0) {
       b.get();
     }
   });
 
-  assertEquals(tracked.dependencies.size, 2);
-  assert(tracked.dependencies.has(a));
-  assert(tracked.dependencies.has(b));
+  assertEquals(deps.size, 2);
+  assert(deps.has(a));
+  assert(deps.has(b));
 });
 
-test('track and reactive exported', () => {
-  const count = new Signal(0);
-
-  // Verify track returns object with dependencies and value
-  const tracked = track(() => {
-    return count.get();
+test('reactive: runs initially', () => {
+  const a = new Signal(1);
+  let runs = 0;
+  reactive(() => {
+    a.get();
+    runs++;
   });
+  assertEquals(runs, 1);
+});
 
-  assert(tracked.dependencies instanceof Set);
-  assert(tracked.dependencies.has(count));
-  assertEquals(tracked.value, 0);
+test('reactive: re-runs when dependencies change', () => {
+  const a = new Signal(1);
+  let lastValue;
+  let runs = 0;
+  reactive(() => {
+    lastValue = a.get();
+    runs++;
+  });
+  assertEquals(runs, 1);
+  assertEquals(lastValue, 1);
 
-  // Verify reactive is a function
-  assert(typeof reactive === 'function');
+  a.set(5);
+  assertEquals(runs, 2);
+  assertEquals(lastValue, 5);
+
+  a.set(10);
+  assertEquals(runs, 3);
+  assertEquals(lastValue, 10);
+});
+
+test('reactive: returns unsubscribe that stops further runs', () => {
+  const a = new Signal(1);
+  let runs = 0;
+  const unsubscribe = reactive(() => {
+    a.get();
+    runs++;
+  });
+  assertEquals(runs, 1);
+
+  a.set(2);
+  assertEquals(runs, 2);
+
+  unsubscribe();
+  a.set(3);
+  assertEquals(runs, 2); // No further runs
+});
+
+test('reactive: tracks dynamic dependencies across runs', () => {
+  const which = new Signal('a');
+  const a = new Signal(1);
+  const b = new Signal(10);
+
+  let lastValue;
+  reactive(() => {
+    lastValue = which.get() === 'a' ? a.get() : b.get();
+  });
+  assertEquals(lastValue, 1);
+
+  // While which === 'a', updates to b should not trigger reactive
+  let runsBeforeBSet = lastValue;
+  b.set(99);
+  assertEquals(lastValue, runsBeforeBSet); // unchanged
+
+  // Switch to tracking b
+  which.set('b');
+  assertEquals(lastValue, 99);
+
+  // Now updates to a should not trigger
+  a.set(42);
+  assertEquals(lastValue, 99);
+
+  // Updates to b should
+  b.set(100);
+  assertEquals(lastValue, 100);
 });
 
 // Computed Tests
@@ -533,6 +593,33 @@ test('Signal child: computed returning element rerenders on dependency change', 
   isVisible.set(false);
   assertEquals(app.querySelector('#hidden').textContent, 'H');
   assert(!app.querySelector('#visible'));
+});
+
+test('computed: stop() halts further recomputation', () => {
+  const a = new Signal(1);
+  const doubled = computed(() => a.get() * 2);
+
+  assertEquals(doubled.get(), 2);
+  a.set(5);
+  assertEquals(doubled.get(), 10);
+
+  doubled.stop();
+  a.set(100);
+  assertEquals(doubled.get(), 10); // Stays at last computed value
+});
+
+test('computed: result is instanceof Signal (works with existing checks)', () => {
+  const a = new Signal(1);
+  const c = computed(() => a.get() * 2);
+  assert(c instanceof Signal);
+});
+
+test('computed: can be used inline as createElement child without destructuring', () => {
+  const count = new Signal(3);
+  const div = createElement('div', {}, computed(() => count.get() * 2));
+  assertEquals(div.textContent, '6');
+  count.set(5);
+  assertEquals(div.textContent, '10');
 });
 
 test('computed: notifies its own subscribers', () => {

@@ -34,72 +34,54 @@ function track(fn) {
   const prevTracker = currentTracker;
   currentTracker = tracker;
 
-  let result;
+  let value;
   try {
-    result = fn();
+    value = fn();
   } finally {
     currentTracker = prevTracker;
   }
 
-  return { value: result, dependencies: tracker.dependencies };
-}
-
-function computed(fn) {
-  const result = new Signal(undefined);
-  let unsubs = [];
-
-  const doRecompute = () => {
-    const { value, dependencies } = track(fn);
-
-    // Update result via set() so subscribers are notified
-    result.set(value);
-
-    // Unsubscribe from old dependencies and subscribe to new ones
-    unsubs.forEach(unsubscribe => unsubscribe());
-    unsubs = [];
-    dependencies.forEach(signal => {
-      unsubs.push(signal.subscribe(doRecompute));
-    });
-  };
-
-  doRecompute();
-
-  return result;
+  return [value, tracker.dependencies];
 }
 
 function reactive(fn) {
-  let dependencies = new Set();
   let unsubs = [];
-  let isRunning = false;
 
-  const rerun = () => {
-    if (isRunning) return; // Prevent re-entrance
-    isRunning = true;
+  const run = () => {
+    // Drop old subscriptions
+    unsubs.forEach(u => u());
+    unsubs = [];
 
-    try {
-      // Unsubscribe from old dependencies
-      unsubs.forEach(fn => fn());
-      unsubs = [];
+    // Run and capture new dependencies
+    const [, dependencies] = track(fn);
 
-      // Track and run
-      dependencies = track(fn);
-
-      // Subscribe to new dependencies
-      dependencies.forEach(signal => {
-        unsubs.push(signal.subscribe(rerun));
-      });
-    } finally {
-      isRunning = false;
-    }
+    // Subscribe to new dependencies
+    dependencies.forEach(signal => {
+      unsubs.push(signal.subscribe(run));
+    });
   };
 
-  // Initial run and subscription
-  rerun();
+  run();
 
-  // Return the unsubscribe function
   return () => {
-    unsubs.forEach(fn => fn());
+    unsubs.forEach(u => u());
+    unsubs = [];
   };
+}
+
+class ComputedSignal extends Signal {
+  constructor(fn) {
+    super(undefined);
+    this._stop = reactive(() => this.set(fn()));
+  }
+
+  stop() {
+    this._stop();
+  }
+}
+
+function computed(fn) {
+  return new ComputedSignal(fn);
 }
 
 function isSignal(value) {

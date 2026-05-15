@@ -1,10 +1,16 @@
 # Automatic Dependency Tracking
 
-Zero provides automatic dependency tracking through the `track()` function, which records which signals are accessed during function execution.
+Zero builds reactivity in three layers, each adding one capability on top of the previous:
+
+| Function | What it does | Returns |
+|---|---|---|
+| `track(fn)` | Runs `fn` once, records which signals it reads | `[value, dependencies]` |
+| `reactive(fn)` | Runs `fn`, then re-runs it whenever any tracked signal changes | `unsubscribe()` function |
+| `computed(fn)` | Same as `reactive()` but stores the return value in a `Signal` | A `Signal` with `.stop()` |
 
 ## The Problem
 
-Without dependency tracking, you must manually specify which signals to subscribe to:
+Without dependency tracking, you must manually subscribe to every signal a function reads:
 
 ```js
 const firstName = new Signal('John');
@@ -20,12 +26,12 @@ lastName.subscribe(() => {
   fullName = firstName.get() + ' ' + lastName.get();
 });
 
-// What if you forget a subscription? The derived value won't update.
+// Forget a subscription? The derived value won't update.
 ```
 
-## The Solution: track()
+## Layer 1: `track(fn)`
 
-Use `track()` to automatically detect which signals your function accesses:
+The primitive. Runs the function once, and tells you what signals it accessed:
 
 ```js
 import { Signal, track } from './zero.js';
@@ -33,135 +39,135 @@ import { Signal, track } from './zero.js';
 const firstName = new Signal('John');
 const lastName = new Signal('Doe');
 
-const dependencies = track(() => {
-  const first = firstName.get();
-  const last = lastName.get();
-  console.log(`Full name: ${first} ${last}`);
+const [value, deps] = track(() => {
+  return firstName.get() + ' ' + lastName.get();
 });
 
-console.log(dependencies.size); // 2 - firstName and lastName
-dependencies.forEach(signal => {
-  console.log(`Tracked signal`);
-});
+console.log(value);    // "John Doe"
+console.log(deps.size); // 2
+console.log(deps.has(firstName)); // true
 ```
 
-The `track()` function:
-1. Creates a tracking context
-2. Executes your function
-3. Records all signal accesses via `.get()`
-4. Returns a Set of all accessed signals
+Returns a `[value, dependencies]` tuple. `dependencies` is a `Set<Signal>`.
 
-## Example: Auto-subscribing
+You almost never use `track()` directly — it's the building block for `reactive()` and `computed()`.
 
-You can use `track()` to automatically set up subscriptions:
+## Layer 2: `reactive(fn)`
+
+`track()` + auto re-run. Use when you want a side effect to re-run whenever its inputs change:
 
 ```js
-function autoSubscribe(fn) {
-  const dependencies = track(fn);
-  
-  // Subscribe to all accessed signals
-  dependencies.forEach(signal => {
-    signal.subscribe(fn); // Re-run when signal changes
-  });
-}
+import { Signal, reactive } from './zero.js';
 
 const count = new Signal(0);
-const doubled = new Signal(0);
 
-autoSubscribe(() => {
-  doubled.set(count.get() * 2);
+const unsubscribe = reactive(() => {
+  console.log('Count is:', count.get());
 });
+// Prints: "Count is: 0"
 
 count.set(5);
-// Function automatically runs and updates doubled to 10
+// Prints: "Count is: 5"
+
+count.set(10);
+// Prints: "Count is: 10"
+
+unsubscribe(); // Stop re-running
+count.set(99); // (nothing prints)
 ```
 
-## Example: Computed Values
+`reactive()` returns an unsubscribe function. Call it to stop the effect.
 
-Create derived values that automatically stay in sync:
+### Dynamic Dependencies
+
+Because `reactive()` re-tracks on every run, a branch-only access only counts as a dependency while that branch is active:
 
 ```js
+const which = new Signal('a');
+const a = new Signal(1);
+const b = new Signal(10);
+
+reactive(() => {
+  console.log(which.get() === 'a' ? a.get() : b.get());
+});
+
+b.set(99); // Doesn't trigger — b isn't a dependency right now
+which.set('b'); // Re-runs. Now b is a dependency, a is not.
+a.set(42); // Doesn't trigger.
+b.set(100); // Triggers.
+```
+
+## Layer 3: `computed(fn)`
+
+`reactive()` + a `Signal` to hold the result. Use when you want a *derived value* you can pass around, render, or subscribe to:
+
+```js
+import { Signal, computed } from './zero.js';
+
 const firstName = new Signal('John');
 const lastName = new Signal('Doe');
-const age = new Signal(30);
 
-function createComputed(fn) {
-  let value = null;
-  const dependencies = track(() => {
-    value = fn();
-  });
-  
-  // Auto-update when any dependency changes
-  dependencies.forEach(signal => {
-    signal.subscribe(() => {
-      track(() => {
-        value = fn();
-      });
-    });
-  });
-  
-  return {
-    get() { return value; }
-  };
+const fullName = computed(() => firstName.get() + ' ' + lastName.get());
+
+console.log(fullName.get()); // "John Doe"
+firstName.set('Jane');
+console.log(fullName.get()); // "Jane Doe"
+```
+
+`computed()` returns a `Signal`. You can use it anywhere a signal works — inline in `createElement`, subscribed to, passed to another `computed()`, etc:
+
+```js
+// Inline in JSX-like markup — no destructuring needed
+createElement('p', {}, 'Hello, ', computed(() => name.get().toUpperCase()));
+```
+
+### Cleanup
+
+The returned signal has a `.stop()` method that disconnects it from its dependencies:
+
+```js
+const doubled = computed(() => count.get() * 2);
+// ... use it ...
+doubled.stop(); // Stop reacting to count changes
+```
+
+After `.stop()`, the signal keeps its last value but no longer updates when its dependencies change. Downstream subscribers (consumers of `doubled`) are not affected — they remain subscribed.
+
+## Conceptual Model
+
+```
+track       → "what signals does this function read?"
+reactive    → "rerun this function whenever its signals change"
+computed    → "give me a signal whose value is always the result of this function"
+```
+
+Each layer is implemented in terms of the previous:
+
+```js
+class ComputedSignal extends Signal {
+  constructor(fn) {
+    super(undefined);
+    this._stop = reactive(() => this.set(fn()));
+  }
+  stop() { this._stop(); }
 }
 
-const profile = createComputed(() => {
-  const first = firstName.get();
-  const last = lastName.get();
-  const a = age.get();
-  return `${first} ${last}, age ${a}`;
-});
-
-console.log(profile.get()); // "John Doe, age 30"
-firstName.set('Jane');
-console.log(profile.get()); // "Jane Doe, age 30" (automatically updated)
+function computed(fn) {
+  return new ComputedSignal(fn);
+}
 ```
-
-## Advantages
-
-1. **No dependency lists** — The function itself is the source of truth
-2. **Refactoring safe** — Add/remove signal accesses and dependencies update automatically
-3. **Less boilerplate** — No manual subscribe/unsubscribe calls
-4. **Fewer bugs** — Can't forget to subscribe to a signal
-
-## API
-
-### track(fn)
-
-Executes a function and records which signals it accesses.
-
-**Parameters:**
-- `fn` — A function that calls `.get()` on signals
-
-**Returns:**
-- `Set<Signal>` — Set of all signals accessed in the function
-
-**Example:**
-```js
-const deps = track(() => {
-  a.get();
-  b.get();
-});
-
-console.log(deps.size); // 2
-```
-
-### reactive(fn)
-
-*Note: The reactive() function is experimental and not yet fully tested. Use track() with your own subscription logic for now.*
 
 ## Limitations
 
-- Only accesses within the function are tracked — accessing `.value` directly won't be tracked
-- Conditional accesses are tracked (signal is in the set even if not accessed on this run)
-- Async operations: Signals accessed after await won't be tracked
+- Only `.get()` accesses are tracked — reading `signal.value` directly skips tracking.
+- Async operations: signals accessed after an `await` won't be tracked, because the tracking context has already been torn down.
 
 ## Comparison to React
 
-| Aspect | Zero `track()` | React `useEffect` |
-|--------|---|---|
+| Aspect | Zero `computed()` | React `useMemo` |
+|---|---|---|
 | Dependencies | Automatic | Manual list |
-| Refactoring | Safe - deps auto-update | Error-prone - must update list |
-| Boilerplate | Minimal | useCallback, useMemo needed |
-| Dynamic deps | Detected automatically | Must list all possibilities |
-| Performance | Only runs on used signals | Runs on any dep change |
+| Refactoring | Safe — deps auto-update | Error-prone — must update list |
+| Dynamic deps | Detected automatically | Must enumerate all possibilities |
+| Re-render scope | Just this value | Entire component |
+| Tear-down | `.stop()` | Tied to component lifecycle |
