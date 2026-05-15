@@ -207,10 +207,30 @@ function computed(fn) {
 }
 ```
 
+## Automatic Cleanup
+
+Subscriptions made by `createElement` on behalf of an element are **cleaned up automatically** when the element is removed from the document. Zero installs a single document-wide `MutationObserver` and tears down style/attribute/property/child subscriptions, plus calls `.stop()` on any inline `computed()` signals.
+
+```js
+const color = new Signal('red');
+const div = createElement('div', { style: { color } });
+
+document.body.appendChild(div);
+// color has 1 subscriber
+
+div.remove();
+// (next microtask) color has 0 subscribers
+```
+
+Moves don't trigger cleanup — only removals where the element is no longer connected.
+
+For environments without a `MutationObserver` (server-side rendering, certain test runners), or for explicit synchronous teardown, call `unmount(element)`.
+
 ## Limitations
 
 - Only `.get()` accesses are tracked — reading `signal.value` directly skips tracking.
 - Async operations: signals accessed after an `await` won't be tracked, because the tracking context has already been torn down.
+- Resources allocated *outside* the framework's subscription bookkeeping (timers, event listeners on `window`, fetches) are **not** auto-cleaned. Use `reactive()` with a returned cleanup function for those — see the lifecycle patterns doc.
 
 ## Comparison to React
 

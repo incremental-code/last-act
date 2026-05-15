@@ -29,6 +29,74 @@ class Signal {
   }
 }
 
+// --- Cleanup infrastructure -------------------------------------------------
+// Every signal subscription made on behalf of an element is registered against
+// that element under CLEANUPS. When the element is removed from the document
+// (detected via a single document-wide MutationObserver), its cleanups run.
+// This drops upstream signal subscribers so detached DOM doesn't stay pinned.
+
+const CLEANUPS = Symbol('zero/cleanups');
+let observerInstalled = false;
+
+function registerCleanup(element, unsubscribe) {
+  if (!element || typeof unsubscribe !== 'function') return;
+  (element[CLEANUPS] ??= []).push(unsubscribe);
+  installObserver();
+}
+
+function runCleanupsDeep(node) {
+  if (!node || node.nodeType !== 1) return; // ELEMENT_NODE only
+  const cleanups = node[CLEANUPS];
+  if (cleanups) {
+    for (const fn of cleanups) {
+      try { fn(); } catch (e) { /* swallow — one bad cleanup shouldn't block others */ }
+    }
+    node[CLEANUPS] = null;
+  }
+  // Recurse into descendants
+  for (const child of node.children) {
+    runCleanupsDeep(child);
+  }
+}
+
+function installObserver() {
+  if (observerInstalled) return;
+  if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return;
+  observerInstalled = true;
+
+  const observer = new MutationObserver((mutations) => {
+    // Collect all removed element nodes first
+    const removed = [];
+    for (const m of mutations) {
+      for (const node of m.removedNodes) {
+        if (node.nodeType === 1) removed.push(node);
+      }
+    }
+    if (removed.length === 0) return;
+
+    // Defer cleanup by a microtask, then verify the node really left the DOM
+    // (it might have just been moved to another parent within the same task)
+    queueMicrotask(() => {
+      for (const node of removed) {
+        if (!node.isConnected) runCleanupsDeep(node);
+      }
+    });
+  });
+
+  observer.observe(document.documentElement || document, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+// Test-only hook: synchronously dispose an element subtree.
+// Useful for environments without a working MutationObserver (or for explicit teardown).
+function unmount(element) {
+  runCleanupsDeep(element);
+}
+
+// --- Reactivity primitives --------------------------------------------------
+
 function track(fn) {
   const tracker = { dependencies: new Set() };
   const prevTracker = currentTracker;
@@ -139,6 +207,11 @@ function createElement(type, props = {}, ...children) {
         } else {
           renderSignalChild(element, child);
         }
+        // If the child is a ComputedSignal, stop it when the element unmounts
+        // so it stops reacting to its own upstream signals.
+        if (child instanceof ComputedSignal) {
+          registerCleanup(element, () => child.stop());
+        }
       }
     }
   }
@@ -157,7 +230,10 @@ function setProperty(element, key, value, propsProxy) {
           element.setAttribute(attrKey, signal.get());
         };
         updateAttr();
-        signal.subscribe(updateAttr);
+        registerCleanup(element, signal.subscribe(updateAttr));
+        if (signal instanceof ComputedSignal) {
+          registerCleanup(element, () => signal.stop());
+        }
       } else {
         element.setAttribute(attrKey, attrValue);
       }
@@ -173,7 +249,10 @@ function setProperty(element, key, value, propsProxy) {
           element.style[styleKey] = signal.get();
         };
         updateStyle();
-        signal.subscribe(updateStyle);
+        registerCleanup(element, signal.subscribe(updateStyle));
+        if (signal instanceof ComputedSignal) {
+          registerCleanup(element, () => signal.stop());
+        }
       } else {
         element.style[styleKey] = styleValue;
       }
@@ -193,7 +272,10 @@ function setProperty(element, key, value, propsProxy) {
     };
 
     updateProperty();
-    signal.subscribe(updateProperty);
+    registerCleanup(element, signal.subscribe(updateProperty));
+    if (signal instanceof ComputedSignal) {
+      registerCleanup(element, () => signal.stop());
+    }
   } else if (typeof value === 'function') {
     element[key] = value;
   } else {
@@ -216,7 +298,7 @@ function renderSignalChild(container, signal) {
   let currentNode = makeNode(signal.get());
   container.appendChild(currentNode);
 
-  signal.subscribe((newValue) => {
+  const unsub = signal.subscribe((newValue) => {
     // Same-type fast path for text: just mutate the existing text node
     if (
       !(newValue instanceof HTMLElement) &&
@@ -231,6 +313,7 @@ function renderSignalChild(container, signal) {
     currentNode.replaceWith(newNode);
     currentNode = newNode;
   });
+  registerCleanup(container, unsub);
 }
 
 function renderArray(container, arraySignal, keyFn) {
@@ -291,7 +374,7 @@ function renderArray(container, arraySignal, keyFn) {
   };
 
   render();
-  arraySignal.subscribe(render);
+  registerCleanup(container, arraySignal.subscribe(render));
 }
 
-export { Signal, createElement, track, computed, reactive };
+export { Signal, createElement, track, computed, reactive, unmount };

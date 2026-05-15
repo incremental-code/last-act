@@ -3,17 +3,37 @@ import { JSDOM } from 'jsdom';
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
 global.document = dom.window.document;
 global.HTMLElement = dom.window.HTMLElement;
+global.MutationObserver = dom.window.MutationObserver;
 
-import { Signal, createElement, track, computed, reactive } from './zero.js';
+import { Signal, createElement, track, computed, reactive, unmount } from './zero.js';
 
 let testCount = 0;
 let passCount = 0;
 let failCount = 0;
 
+const pendingTests = [];
+
 function test(name, fn) {
   testCount++;
   try {
-    fn();
+    const result = fn();
+    if (result && typeof result.then === 'function') {
+      // Async test — register for awaiting at the end
+      pendingTests.push(
+        result.then(
+          () => {
+            passCount++;
+            console.log(`✓ ${name}`);
+          },
+          (error) => {
+            failCount++;
+            console.error(`✗ ${name}`);
+            console.error(`  ${error.message}`);
+          }
+        )
+      );
+      return;
+    }
     passCount++;
     console.log(`✓ ${name}`);
   } catch (error) {
@@ -715,6 +735,163 @@ test('computed: notifies its own subscribers', () => {
   assertEquals(notified, 2);
   assertEquals(lastValue, 20);
 });
+
+// Cleanup Tests
+test('cleanup: unmount drops style subscriptions', () => {
+  const color = new Signal('red');
+  const div = createElement('div', { style: { color } });
+
+  assertEquals(color.subscribers.size, 1);
+  unmount(div);
+  assertEquals(color.subscribers.size, 0);
+});
+
+test('cleanup: unmount drops attribute subscriptions', () => {
+  const label = new Signal('initial');
+  const div = createElement('div', { attributes: { 'data-label': label } });
+
+  assertEquals(label.subscribers.size, 1);
+  unmount(div);
+  assertEquals(label.subscribers.size, 0);
+});
+
+test('cleanup: unmount drops property subscriptions', () => {
+  const value = new Signal('hi');
+  const input = createElement('input', { value });
+
+  assertEquals(value.subscribers.size, 1);
+  unmount(input);
+  assertEquals(value.subscribers.size, 0);
+});
+
+test('cleanup: unmount drops scalar-child subscriptions', () => {
+  const text = new Signal('hello');
+  const div = createElement('div', {}, text);
+
+  assertEquals(text.subscribers.size, 1);
+  unmount(div);
+  assertEquals(text.subscribers.size, 0);
+});
+
+test('cleanup: unmount drops array-child subscriptions', () => {
+  const items = new Signal(['a', 'b']);
+  const div = createElement('div', {}, items);
+
+  assertEquals(items.subscribers.size, 1);
+  unmount(div);
+  assertEquals(items.subscribers.size, 0);
+});
+
+test('cleanup: unmount recurses into descendants', () => {
+  const color = new Signal('red');
+  const text = new Signal('hello');
+
+  const inner = createElement('span', { style: { color } }, text);
+  const outer = createElement('div', {}, inner);
+
+  assertEquals(color.subscribers.size, 1);
+  assertEquals(text.subscribers.size, 1);
+
+  unmount(outer);
+
+  assertEquals(color.subscribers.size, 0);
+  assertEquals(text.subscribers.size, 0);
+});
+
+test('cleanup: unmount calls .stop() on inline computed children', () => {
+  const source = new Signal(1);
+  const doubled = computed(() => source.get() * 2);
+
+  // doubled has subscribed to source
+  assertEquals(source.subscribers.size, 1);
+
+  const div = createElement('div', {}, doubled);
+  // doubled.subscribers now has the renderSignalChild updater
+  assertEquals(doubled.subscribers.size, 1);
+
+  unmount(div);
+
+  // div is gone:
+  //  - renderSignalChild's subscription on `doubled` is removed
+  //  - .stop() on doubled removes doubled's own subscription on source
+  assertEquals(doubled.subscribers.size, 0);
+  assertEquals(source.subscribers.size, 0);
+});
+
+test('cleanup: unmount stops inline computed in attribute position', () => {
+  const source = new Signal('foo');
+  const upper = computed(() => source.get().toUpperCase());
+
+  assertEquals(source.subscribers.size, 1);
+
+  const div = createElement('div', { attributes: { 'data-x': upper } });
+  assertEquals(upper.subscribers.size, 1);
+
+  unmount(div);
+
+  assertEquals(upper.subscribers.size, 0);
+  assertEquals(source.subscribers.size, 0);
+});
+
+test('cleanup: unmount is idempotent', () => {
+  const color = new Signal('red');
+  const div = createElement('div', { style: { color } });
+
+  unmount(div);
+  unmount(div); // should not throw
+  assertEquals(color.subscribers.size, 0);
+});
+
+test('cleanup: signal updates after unmount do not error', () => {
+  const text = new Signal('hi');
+  const div = createElement('div', {}, text);
+
+  unmount(div);
+  text.set('after'); // should not throw
+  // The detached text node is no longer referenced; we just verify nothing blew up
+  assert(true);
+});
+
+test('cleanup: MutationObserver runs cleanup when element is removed from DOM', async () => {
+  const color = new Signal('red');
+  const div = createElement('div', { style: { color } });
+  document.body.appendChild(div);
+  assertEquals(color.subscribers.size, 1);
+
+  div.remove();
+
+  // Give the MutationObserver and the deferred microtask a chance to run
+  await new Promise(resolve => setTimeout(resolve, 10));
+
+  assertEquals(color.subscribers.size, 0);
+});
+
+test('cleanup: move (remove + re-append) does not run cleanup', async () => {
+  const color = new Signal('red');
+  const div = createElement('div', { style: { color } });
+  const parentA = document.createElement('section');
+  const parentB = document.createElement('section');
+  document.body.appendChild(parentA);
+  document.body.appendChild(parentB);
+  parentA.appendChild(div);
+  assertEquals(color.subscribers.size, 1);
+
+  // "Move" — synchronously remove from A, re-append to B before microtask drains
+  parentB.appendChild(div); // Browsers also implement appendChild-of-mounted as a move
+
+  await new Promise(resolve => setTimeout(resolve, 10));
+
+  // Subscription must still be intact — the element is still in the document
+  assertEquals(color.subscribers.size, 1);
+
+  // Cleanup happens on a real removal
+  parentB.removeChild(div);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assertEquals(color.subscribers.size, 0);
+});
+
+// Wait for async tests, then print summary
+await Promise.all(pendingTests);
 
 // Summary
 console.log(`\n${'='.repeat(50)}`);

@@ -1,414 +1,155 @@
 # Lifecycle Patterns
 
-Managing setup, cleanup, and lifecycle events in Zero components.
+Setup, cleanup, and resource management in Zero.
 
-## Setup on Mount
+## What Zero cleans up for you automatically
 
-Run code when a component is added to the DOM:
+When you mount an element to the document and later remove it, Zero **automatically**:
+
+- Unsubscribes from any signals bound to styles, attributes, properties, or children of that element
+- Recursively cleans descendants the same way
+- Calls `.stop()` on any `computed()` signals you passed inline (so they stop reacting to their own upstream signals)
+
+This happens via a single document-wide `MutationObserver`. You don't need to do anything for it.
 
 ```js
-function ComponentWithSetup() {
-  const isActive = new Signal(false);
-  const container = createElement('div', {}, 'Component');
+const color = new Signal('red');
+const div = createElement('div', { style: { color } });
 
-  // Setup
-  isActive.set(true);
-  console.log('Component mounted');
+document.body.appendChild(div);
+// color.subscribers.size === 1
 
-  // Cleanup (if removed)
-  const originalRemove = container.remove;
-  container.remove = function() {
-    isActive.set(false);
-    console.log('Component unmounted');
-    originalRemove.call(this);
-  };
-
-  return container;
-}
+div.remove();
+// Asynchronously (next microtask): color.subscribers.size === 0
 ```
 
-## Cleanup on Unmount
+For tests or for explicit teardown, you can call `unmount(element)` directly to run the cleanup synchronously.
 
-Use a cleanup function to remove subscriptions:
+## What you still need to clean up yourself
+
+Anything you allocated *outside* the framework's subscription bookkeeping:
+
+- `setInterval` / `setTimeout`
+- `addEventListener` on `window`, `document`, or external elements
+- Open WebSockets, EventSources, or other external resources
+- In-flight `fetch` requests
+- Third-party library subscriptions
+
+For these, use `reactive()` and return a cleanup function:
+
+## Interval / Timer Lifecycle
 
 ```js
-function withCleanup(componentFn) {
-  return function(...args) {
-    const cleanups = [];
-    const signal = new Signal(null);
+import { Signal, reactive } from './zero.js';
 
-    // Track subscriptions
-    const registerCleanup = (fn) => {
-      cleanups.push(fn);
-    };
+const isRunning = new Signal(false);
+const time = new Signal(0);
 
-    const element = componentFn(...args, registerCleanup);
+reactive(() => {
+  if (!isRunning.get()) return;
 
-    // Override remove to cleanup
-    const originalRemove = element.remove;
-    element.remove = function() {
-      cleanups.forEach(cleanup => cleanup());
-      cleanups.length = 0;
-      if (originalRemove) originalRemove.call(this);
-    };
-
-    return element;
-  };
-}
-
-// Usage
-const MyComponent = withCleanup((props, cleanup) => {
-  const count = new Signal(0);
-
-  const unsubscribe = count.subscribe(() => {
-    console.log('Count changed');
-  });
-
-  cleanup(() => unsubscribe());
-
-  return createElement('div', {}, count);
+  const id = setInterval(() => time.set(time.get() + 1), 1000);
+  return () => clearInterval(id);
 });
 ```
 
-## Interval Lifecycle
+When `isRunning` flips:
+- false → true: starts the interval
+- true → false: cleanup runs → `clearInterval` → re-runs the effect (which immediately returns)
 
-Start and stop intervals:
-
-```js
-function Timer() {
-  const time = new Signal(0);
-  let intervalId = null;
-
-  const container = createElement('div', {},
-    createElement('p', {}, 'Time: ', time),
-    createElement('button', {
-      onclick: () => {
-        if (!intervalId) {
-          intervalId = setInterval(() => {
-            time.set(time.get() + 1);
-          }, 1000);
-        }
-      }
-    }, 'Start'),
-    createElement('button', {
-      onclick: () => {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-    }, 'Stop'),
-    createElement('button', {
-      onclick: () => {
-        time.set(0);
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-    }, 'Reset')
-  );
-
-  // Cleanup on remove
-  const originalRemove = container.remove;
-  container.remove = function() {
-    clearInterval(intervalId);
-    originalRemove.call(this);
-  };
-
-  return container;
-}
-```
+When the whole `reactive()` is torn down (e.g. via its returned unsubscribe), the most recent cleanup runs.
 
 ## Event Listener Lifecycle
 
-Manage event listeners:
-
 ```js
-function ResponsiveComponent() {
-  const windowWidth = new Signal(window.innerWidth);
-  const isMobile = new Signal(window.innerWidth < 768);
+const windowWidth = new Signal(window.innerWidth);
 
-  const handleResize = () => {
-    windowWidth.set(window.innerWidth);
-    isMobile.set(window.innerWidth < 768);
-  };
-
-  window.addEventListener('resize', handleResize);
-
-  const container = createElement('div', {},
-    createElement('p', {}, isMobile.get() ? 'Mobile' : 'Desktop')
-  );
-
-  // Update when width changes
-  windowWidth.subscribe(() => {
-    container.querySelector('p').textContent = isMobile.get() ? 'Mobile' : 'Desktop';
-  });
-
-  // Cleanup
-  const originalRemove = container.remove;
-  container.remove = function() {
-    window.removeEventListener('resize', handleResize);
-    originalRemove.call(this);
-  };
-
-  return container;
-}
-```
-
-## Timeout Lifecycle
-
-Manage timeouts:
-
-```js
-function DelayedMessage() {
-  const message = new Signal('');
-  let timeoutId = null;
-
-  const showMessage = () => {
-    message.set('');
-    timeoutId = setTimeout(() => {
-      message.set('Delayed message!');
-    }, 2000);
-  };
-
-  const container = createElement('div', {},
-    createElement('p', {}, message),
-    createElement('button', { onclick: showMessage }, 'Show Message')
-  );
-
-  // Cleanup
-  const originalRemove = container.remove;
-  container.remove = function() {
-    clearTimeout(timeoutId);
-    originalRemove.call(this);
-  };
-
-  return container;
-}
-```
-
-## Fetch Lifecycle
-
-Manage async requests:
-
-```js
-function DataFetcher({ url }) {
-  const data = new Signal(null);
-  const isLoading = new Signal(false);
-  const error = new Signal(null);
-  let abortController = null;
-
-  const fetch_data = async () => {
-    isLoading.set(true);
-    error.set(null);
-
-    abortController = new AbortController();
-
-    try {
-      const response = await fetch(url, {
-        signal: abortController.signal
-      });
-      const result = await response.json();
-      data.set(result);
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        error.set(err.message);
-      }
-    } finally {
-      isLoading.set(false);
-    }
-  };
-
-  const container = createElement('div', {},
-    createElement('button', { onclick: fetch_data }, 'Fetch'),
-    isLoading.get() ? createElement('p', {}, 'Loading...') : null,
-    error.get() ? createElement('p', { attributes: { class: 'error' } }, error.get()) : null,
-    data.get() ? createElement('pre', {}, JSON.stringify(data.get(), null, 2)) : null
-  );
-
-  // Cleanup
-  const originalRemove = container.remove;
-  container.remove = function() {
-    abortController?.abort();
-    originalRemove.call(this);
-  };
-
-  return container;
-}
-```
-
-## Animation Lifecycle
-
-Manage animations:
-
-```js
-function AnimatedBox() {
-  const isOpen = new Signal(false);
-  let animationId = null;
-
-  const toggle = () => {
-    isOpen.set(!isOpen.get());
-  };
-
-  const box = createElement('div', {
-    style: {
-      width: '100px',
-      height: '100px',
-      background: 'blue',
-      transition: 'all 0.3s ease'
-    }
-  });
-
-  isOpen.subscribe(() => {
-    if (isOpen.get()) {
-      box.style.width = '200px';
-      box.style.height = '200px';
-    } else {
-      box.style.width = '100px';
-      box.style.height = '100px';
-    }
-  });
-
-  const container = createElement('div', {},
-    box,
-    createElement('button', { onclick: toggle }, 'Toggle')
-  );
-
-  // Cleanup
-  const originalRemove = container.remove;
-  container.remove = function() {
-    cancelAnimationFrame(animationId);
-    originalRemove.call(this);
-  };
-
-  return container;
-}
-```
-
-## Observer Lifecycle
-
-Manage IntersectionObserver, ResizeObserver, etc.:
-
-```js
-function ObservedElement() {
-  const isVisible = new Signal(false);
-  let observer = null;
-
-  const element = createElement('div', {
-    style: {
-      width: '100px',
-      height: '100px',
-      background: isVisible.get() ? 'green' : 'red'
-    }
-  });
-
-  // Setup observer
-  observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      isVisible.set(entry.isIntersecting);
-    });
-  });
-
-  observer.observe(element);
-
-  // Update color when visibility changes
-  isVisible.subscribe(() => {
-    element.style.background = isVisible.get() ? 'green' : 'red';
-  });
-
-  // Cleanup
-  const originalRemove = element.remove;
-  element.remove = function() {
-    observer?.disconnect();
-    originalRemove.call(this);
-  };
-
-  return element;
-}
-```
-
-## Storage Sync Lifecycle
-
-Persist state across sessions:
-
-```js
-function PersistentCounter() {
-  const count = new Signal(parseInt(localStorage.getItem('count') || '0'));
-
-  const container = createElement('div', {},
-    createElement('p', {}, 'Count: ', count),
-    createElement('button', {
-      onclick: () => count.set(count.get() + 1)
-    }, 'Increment')
-  );
-
-  // Save to storage
-  count.subscribe((value) => {
-    localStorage.setItem('count', value);
-  });
-
-  // Sync across tabs
-  const handleStorageChange = (e) => {
-    if (e.key === 'count') {
-      count.set(parseInt(e.newValue || '0'));
-    }
-  };
-
-  window.addEventListener('storage', handleStorageChange);
-
-  // Cleanup
-  const originalRemove = container.remove;
-  container.remove = function() {
-    window.removeEventListener('storage', handleStorageChange);
-    originalRemove.call(this);
-  };
-
-  return container;
-}
-```
-
-## Lifecycle Helper
-
-```js
-function createComponent(setupFn) {
-  return function(...args) {
-    const cleanups = [];
-    
-    const lifecycle = {
-      onCleanup: (fn) => cleanups.push(fn)
-    };
-
-    const element = setupFn(...args, lifecycle);
-
-    const originalRemove = element.remove || function() {};
-    element.remove = function() {
-      cleanups.reverse().forEach(cleanup => cleanup());
-      if (originalRemove) originalRemove.call(this);
-    };
-
-    return element;
-  };
-}
-
-// Usage
-const MyComponent = createComponent((props, { onCleanup }) => {
-  const count = new Signal(0);
-
-  const unsubscribe = count.subscribe(() => {
-    console.log('Count:', count.get());
-  });
-
-  onCleanup(() => unsubscribe());
-  onCleanup(() => console.log('Cleaned up MyComponent'));
-
-  return createElement('div', {}, count);
+reactive(() => {
+  const handler = () => windowWidth.set(window.innerWidth);
+  window.addEventListener('resize', handler);
+  return () => window.removeEventListener('resize', handler);
 });
 ```
 
-## Performance: Lifecycle Cleanup
+## AbortController-Backed Fetch
 
-Always clean up:
-- **Subscriptions** — Prevent memory leaks
-- **Event listeners** — Prevent multiple listeners on elements
-- **Timers** — Prevent orphaned intervals/timeouts
-- **Observers** — Prevent memory leaks from watching elements
-- **Fetch requests** — Abort in-flight requests
+```js
+const userId = new Signal(1);
+const userData = new Signal(null);
 
-Clean up in reverse order of setup to avoid dependency issues.
+reactive(() => {
+  const controller = new AbortController();
+
+  fetch(`/api/users/${userId.get()}`, { signal: controller.signal })
+    .then(r => r.json())
+    .then(data => userData.set(data))
+    .catch(err => { if (err.name !== 'AbortError') throw err; });
+
+  return () => controller.abort();
+});
+```
+
+Rapid changes to `userId` abort the previous request before the next one starts. Only the latest response wins.
+
+## Pairing Reactives with Elements
+
+If a `reactive()` belongs to a specific element's lifecycle, tie them together by capturing the unsubscribe in a cleanup closure on the element. The easiest way is `unmount`:
+
+```js
+import { unmount } from './zero.js';
+
+function Counter() {
+  const count = new Signal(0);
+
+  const stop = reactive(() => {
+    const id = setInterval(() => count.set(count.get() + 1), 1000);
+    return () => clearInterval(id);
+  });
+
+  const el = createElement('div', {}, count);
+  // When the framework cleans up this element, also stop the reactive.
+  // (Standard userland trick: register cleanup against the element's symbol-keyed slot.)
+  // For most apps, just trusting MutationObserver-driven cleanup is enough.
+
+  return el;
+}
+```
+
+If the element is removed from the DOM, the MutationObserver fires cleanup for the element — but the `reactive()` you started inside `Counter` isn't owned by that element, so it'll keep running. Until Zero exposes a richer "scope" API, the explicit pattern is:
+
+```js
+function Counter() {
+  const count = new Signal(0);
+  const stop = reactive(() => { /* ... */ });
+
+  const el = createElement('div', {}, count);
+  el.addEventListener('zero:cleanup', stop); // or manage stop yourself
+  return el;
+}
+```
+
+For most use cases, putting external resources inside the `reactive()` and letting it tear down naturally when you call its `unsubscribe()` is enough. Long-lived global subscriptions (like `window` resize) typically live for the page lifetime anyway.
+
+## Global Subscriptions
+
+For things meant to live for the whole page (telemetry, global keyboard shortcuts, online/offline detection), just write them at module load:
+
+```js
+window.addEventListener('online', () => isOnline.set(true));
+window.addEventListener('offline', () => isOnline.set(false));
+```
+
+No cleanup needed — they should outlive any individual component.
+
+## Summary
+
+| What you allocate | Who cleans it up |
+|---|---|
+| `style`/`attribute`/`property` bound to a signal | Zero (on element removal) |
+| Signal as a child of an element | Zero (on element removal) |
+| `computed()` passed inline to `createElement` | Zero (via `.stop()` on element removal) |
+| `setInterval` / `setTimeout` in a `reactive()` | You (return cleanup from the effect) |
+| `addEventListener` in a `reactive()` | You (return cleanup from the effect) |
+| `fetch` in a `reactive()` | You (return `controller.abort` as cleanup) |
+| A top-level `reactive()` not tied to an element | You (call its returned unsubscribe) |
+| Module-level globals (resize, online) | Nothing — they live for the page |
