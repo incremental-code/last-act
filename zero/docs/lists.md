@@ -38,9 +38,11 @@ The key function receives each item and should return a unique identifier. This 
 
 ## Rendering Item Elements
 
-To render structured elements for each item, map the items to elements and pass them as a signal:
+To render structured elements for each item, derive an element-array signal from the items with `computed()`:
 
 ```js
+import { Signal, computed, createElement } from './zero.js';
+
 const items = new Signal([
   { id: 1, name: 'Apple', price: 1.50 },
   { id: 2, name: 'Banana', price: 0.75 }
@@ -48,26 +50,22 @@ const items = new Signal([
 
 function ItemRow(item) {
   return createElement('div', {
-    attributes: { class: 'item-row' }
+    attributes: { class: 'item-row', 'data-id': String(item.id) }
   },
     createElement('span', {}, item.name),
     createElement('span', {}, '$' + item.price)
   );
 }
 
-function renderItems() {
-  return items.get().map(ItemRow);
-}
+const itemElements = computed(() => items.get().map(ItemRow));
 
-const itemElements = new Signal(renderItems());
-
-// Keep itemElements in sync with items
-items.subscribe(() => {
-  itemElements.set(renderItems());
-});
-
-const list = createElement('div', { class: 'items' }, itemElements);
+const list = createElement('div', {
+  attributes: { class: 'items' },
+  key: (el) => el.getAttribute('data-id')
+}, itemElements);
 ```
+
+`computed()` re-runs whenever `items` changes and produces a fresh array of elements. The keyed reconciler in `createElement` uses the `data-id` attribute to track item identity, so reorders and partial updates reuse existing DOM nodes.
 
 ## Adding Items
 
@@ -116,7 +114,7 @@ const todos = new Signal([
 
 function TodoItem(item) {
   return createElement('div', {
-    attributes: { class: 'todo-item' }
+    attributes: { class: 'todo-item', 'data-id': String(item.id) }
   },
     createElement('input', {
       type: 'checkbox',
@@ -126,17 +124,12 @@ function TodoItem(item) {
   );
 }
 
-function renderTodos() {
-  return todos.get().map(TodoItem);
-}
+const todoElements = computed(() => todos.get().map(TodoItem));
 
-const todoElements = new Signal(renderTodos());
-
-todos.subscribe(() => {
-  todoElements.set(renderTodos());
-});
-
-const todoList = createElement('div', { class: 'todos' }, todoElements);
+const todoList = createElement('div', {
+  attributes: { class: 'todos' },
+  key: (el) => el.getAttribute('data-id')
+}, todoElements);
 
 function addTodo(text) {
   const current = todos.get();
