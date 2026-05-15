@@ -2,7 +2,34 @@
 
 Creating and caching derived values that depend on other signals.
 
-## Basic Computed Value
+## Automatic Computed Values
+
+Zero provides a built-in `computed()` function that automatically tracks signal dependencies:
+
+```js
+import { Signal, computed } from './zero.js';
+
+const x = new Signal(5);
+const y = new Signal(3);
+
+// No dependency list needed - dependencies are tracked automatically
+const sum = computed(() => x.get() + y.get());
+
+console.log(sum.get()); // 8
+x.set(10);
+console.log(sum.get()); // 13
+```
+
+The `computed()` function:
+1. **Executes your function** to get the initial value
+2. **Tracks which signals are accessed** via `.get()`
+3. **Creates a Signal** to hold the computed value
+4. **Auto-subscribes** to all accessed signals
+5. **Re-computes and updates** whenever dependencies change
+
+## Basic Computed Value (Manual Approach)
+
+If you prefer explicit control:
 
 ```js
 const x = new Signal(5);
@@ -15,31 +42,44 @@ y.subscribe(() => sum.set(x.get() + y.get()));
 x.set(10); // sum becomes 13
 ```
 
-## Computed Helper
+## Computed in the DOM
 
-Create a reusable pattern:
+Computed signals work directly in DOM templates as children:
 
 ```js
-function computed(computeFn, dependencies) {
-  const signal = new Signal(computeFn());
+import { Signal, computed, createElement } from './zero.js';
 
-  dependencies.forEach(dep => {
-    dep.subscribe(() => {
-      signal.set(computeFn());
-    });
-  });
+const firstName = new Signal('John');
+const lastName = new Signal('Doe');
 
-  return signal;
-}
+const fullName = computed(() => {
+  return `${firstName.get()} ${lastName.get()}`;
+});
 
-// Usage
-const x = new Signal(5);
-const y = new Signal(3);
-const sum = computed(() => x.get() + y.get(), [x, y]);
-const product = computed(() => x.get() * y.get(), [x, y]);
+const greeting = createElement('p', {}, 'Hello, ', fullName);
+
+document.body.appendChild(greeting);
+
+firstName.set('Jane');
+// DOM updates automatically: "Hello, Jane Doe"
 ```
 
-## Computed with Dependencies
+Or in element properties:
+
+```js
+const count = new Signal(0);
+const doubled = computed(() => count.get() * 2);
+
+const display = createElement('div', {
+  style: { color: doubled.get() > 10 ? 'red' : 'blue' }
+}, doubled);
+
+count.set(10); // doubled becomes 20, color becomes red
+```
+
+## Computed with Dependencies (Manual List)
+
+If you prefer to specify dependencies explicitly:
 
 ```js
 const firstName = new Signal('John');

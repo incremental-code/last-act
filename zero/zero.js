@@ -1,3 +1,5 @@
+let currentTracker = null;
+
 class Signal {
   constructor(value) {
     this.value = value;
@@ -5,6 +7,10 @@ class Signal {
   }
 
   get() {
+    // Record this access if we're in a tracking context
+    if (currentTracker) {
+      currentTracker.dependencies.add(this);
+    }
     return this.value;
   }
 
@@ -19,6 +25,95 @@ class Signal {
     this.subscribers.add(callback);
     return () => this.subscribers.delete(callback);
   }
+}
+
+function track(fn) {
+  const tracker = { dependencies: new Set() };
+  const prevTracker = currentTracker;
+  currentTracker = tracker;
+
+  let result;
+  try {
+    result = fn();
+  } finally {
+    currentTracker = prevTracker;
+  }
+
+  return { value: result, dependencies: tracker.dependencies };
+}
+
+function computed(fn) {
+  const result = new Signal(undefined);
+  let unsubs = [];
+  let isUpdating = false;
+
+  const doRecompute = () => {
+    if (isUpdating) return;
+    isUpdating = true;
+
+    try {
+      const tracked = track(fn);
+      const newValue = tracked.value;
+      const newDeps = tracked.dependencies;
+
+      // Update result
+      result.value = newValue;
+      // Manually notify subscribers
+      const subs = Array.from(result.subscribers);
+      subs.forEach(cb => cb(newValue));
+
+      // Unsubscribe from old dependencies
+      unsubs.forEach(unsubscribe => unsubscribe());
+      unsubs = [];
+
+      // Subscribe to new dependencies
+      for (const signal of newDeps) {
+        unsubs.push(signal.subscribe(doRecompute));
+      }
+    } finally {
+      isUpdating = false;
+    }
+  };
+
+  // Initial setup
+  doRecompute();
+
+  return result;
+}
+
+function reactive(fn) {
+  let dependencies = new Set();
+  let unsubs = [];
+  let isRunning = false;
+
+  const rerun = () => {
+    if (isRunning) return; // Prevent re-entrance
+    isRunning = true;
+
+    try {
+      // Unsubscribe from old dependencies
+      unsubs.forEach(fn => fn());
+      unsubs = [];
+
+      // Track and run
+      dependencies = track(fn);
+
+      // Subscribe to new dependencies
+      dependencies.forEach(signal => {
+        unsubs.push(signal.subscribe(rerun));
+      });
+    } finally {
+      isRunning = false;
+    }
+  };
+
+  // Initial run and subscription
+  rerun();
+
+  // Return the unsubscribe function
+  return () => {
+    unsubs.forEach(fn => fn());
+  };
 }
 
 function isSignal(value) {
@@ -196,4 +291,4 @@ function renderArray(container, arraySignal, keyFn) {
   arraySignal.subscribe(render);
 }
 
-export { Signal, createElement };
+export { Signal, createElement, track, computed, reactive };

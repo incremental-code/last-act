@@ -4,7 +4,7 @@ const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
 global.document = dom.window.document;
 global.HTMLElement = dom.window.HTMLElement;
 
-import { Signal, createElement } from './zero.js';
+import { Signal, createElement, track, computed, reactive } from './zero.js';
 
 let testCount = 0;
 let passCount = 0;
@@ -332,6 +332,82 @@ test('Edge case: deeply nested structures', () => {
 
   assertEquals(div.querySelector('div div').textContent, 'deeply nested');
 });
+
+// Dependency Tracking Tests
+test('track: records signal accesses', () => {
+  const a = new Signal(1);
+  const b = new Signal(2);
+  const c = new Signal(3);
+
+  const tracked = track(() => {
+    a.get();
+    b.get();
+  });
+
+  assertEquals(tracked.dependencies.size, 2);
+  assert(tracked.dependencies.has(a));
+  assert(tracked.dependencies.has(b));
+  assert(!tracked.dependencies.has(c));
+});
+
+test('track: does not record unused signals', () => {
+  const a = new Signal(1);
+  const b = new Signal(2);
+
+  const tracked = track(() => {
+    a.get();
+    // b not accessed
+  });
+
+  assertEquals(tracked.dependencies.size, 1);
+  assert(tracked.dependencies.has(a));
+});
+
+test('track: handles nested accesses', () => {
+  const a = new Signal(1);
+  const b = new Signal(2);
+
+  const tracked = track(() => {
+    const val = a.get();
+    if (val > 0) {
+      b.get();
+    }
+  });
+
+  assertEquals(tracked.dependencies.size, 2);
+  assert(tracked.dependencies.has(a));
+  assert(tracked.dependencies.has(b));
+});
+
+test('track and reactive exported', () => {
+  const count = new Signal(0);
+
+  // Verify track returns object with dependencies and value
+  const tracked = track(() => {
+    return count.get();
+  });
+
+  assert(tracked.dependencies instanceof Set);
+  assert(tracked.dependencies.has(count));
+  assertEquals(tracked.value, 0);
+
+  // Verify reactive is a function
+  assert(typeof reactive === 'function');
+});
+
+// Computed Tests
+test('computed: creates signal with computed value', () => {
+  const a = new Signal(5);
+  const b = new Signal(3);
+
+  const sum = computed(() => {
+    return a.get() + b.get();
+  });
+
+  assert(sum instanceof Signal);
+  assertEquals(sum.get(), 8);
+});
+
 
 // Summary
 console.log(`\n${'='.repeat(50)}`);
