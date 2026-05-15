@@ -37,33 +37,37 @@ function App() {
             oninput: e => city.set(e.target.value),
         }),
         createElement("button", { onclick: addCity }, "Add City"),
-        createElement(WorldWeather, { rows })
+        createElement(WorldWeather, { rows, removeCity: name => rows.set(rows.get().filter(r => r.city !== name)) })
     );
 }
 
-function WorldWeather({ rows }) {
+function WorldWeather({ rows, removeCity }) {
     return createElement("table", undefined,
         createElement("thead", undefined,
             createElement("tr", undefined,
                 createElement("th", undefined, "City"),
                 createElement("th", undefined, "Temp"),
                 createElement("th", undefined, "Conditions"),
+                createElement("th", undefined, ""),
             )
         ),
         createElement("tbody", { key: el => el.dataset.city },
             computed(() =>
                 rows.get().map(entry =>
-                    createElement(CityWeather, { entry })
+                    createElement(CityWeather, { entry, removeCity })
                 )
             )
         )
     );
 }
 
-function CityWeather({ entry }) {
+function CityWeather({ entry, removeCity }) {
     return createElement("tr", { attributes: { "data-city": entry.city } },
         createElement("td", undefined, entry.city),
         createElement("td", undefined, entry.temp),
         createElement("td", undefined, entry.desc),
+        createElement("td", undefined,
+            createElement("button", { onclick: () => removeCity(entry.city) }, "✕")
+        ),
     );
 }
