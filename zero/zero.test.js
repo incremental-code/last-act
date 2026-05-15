@@ -426,6 +426,80 @@ test('reactive: returns unsubscribe that stops further runs', () => {
   assertEquals(runs, 2); // No further runs
 });
 
+test('reactive: cleanup runs before next re-run', () => {
+  const dep = new Signal(1);
+  const events = [];
+
+  reactive(() => {
+    const value = dep.get();
+    events.push(`run:${value}`);
+    return () => events.push(`cleanup:${value}`);
+  });
+
+  assertEquals(events.join(','), 'run:1');
+
+  dep.set(2);
+  assertEquals(events.join(','), 'run:1,cleanup:1,run:2');
+
+  dep.set(3);
+  assertEquals(events.join(','), 'run:1,cleanup:1,run:2,cleanup:2,run:3');
+});
+
+test('reactive: cleanup runs on unsubscribe', () => {
+  const dep = new Signal(1);
+  const events = [];
+
+  const unsubscribe = reactive(() => {
+    const value = dep.get();
+    events.push(`run:${value}`);
+    return () => events.push(`cleanup:${value}`);
+  });
+
+  dep.set(2);
+  unsubscribe();
+  assertEquals(events.join(','), 'run:1,cleanup:1,run:2,cleanup:2');
+
+  // No further runs or cleanups after unsubscribe
+  dep.set(3);
+  assertEquals(events.join(','), 'run:1,cleanup:1,run:2,cleanup:2');
+});
+
+test('reactive: cleanup is optional', () => {
+  const dep = new Signal(1);
+  let runs = 0;
+
+  // Function that returns nothing should not throw
+  const unsubscribe = reactive(() => {
+    dep.get();
+    runs++;
+  });
+
+  dep.set(2);
+  assertEquals(runs, 2);
+
+  unsubscribe(); // should not throw
+});
+
+test('reactive: cleanup captures fresh closure each run', () => {
+  // Verify that the cleanup function captured on run N references the
+  // values that were in scope during run N, not later runs
+  const dep = new Signal(10);
+  const capturedAtCleanup = [];
+
+  reactive(() => {
+    const snapshot = dep.get();
+    return () => capturedAtCleanup.push(snapshot);
+  });
+
+  dep.set(20);
+  dep.set(30);
+
+  // First cleanup fires before second run (when dep=20)
+  // Second cleanup fires before third run (when dep=30)
+  // Cleanups captured snapshots at run time: 10, 20
+  assertEquals(capturedAtCleanup.join(','), '10,20');
+});
+
 test('reactive: tracks dynamic dependencies across runs', () => {
   const which = new Signal('a');
   const a = new Signal(1);

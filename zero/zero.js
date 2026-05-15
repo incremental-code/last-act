@@ -46,14 +46,24 @@ function track(fn) {
 
 function reactive(fn) {
   let unsubs = [];
+  let cleanup = null;
 
   const run = () => {
+    // Run previous run's cleanup before starting a new run
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+
     // Drop old subscriptions
     unsubs.forEach(u => u());
     unsubs = [];
 
-    // Run and capture new dependencies
-    const [, dependencies] = track(fn);
+    // Run and capture new dependencies; if fn returns a function, treat it as cleanup
+    const [result, dependencies] = track(fn);
+    if (typeof result === 'function') {
+      cleanup = result;
+    }
 
     // Subscribe to new dependencies
     dependencies.forEach(signal => {
@@ -64,6 +74,10 @@ function reactive(fn) {
   run();
 
   return () => {
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
     unsubs.forEach(u => u());
     unsubs = [];
   };

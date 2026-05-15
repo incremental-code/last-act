@@ -97,6 +97,56 @@ a.set(42); // Doesn't trigger.
 b.set(100); // Triggers.
 ```
 
+### Cleanup (React-style)
+
+If your effect allocates resources — event listeners, timers, sockets, fetch aborts — return a cleanup function from the effect. Zero will call it **before the next re-run** and **once more when the effect is torn down**:
+
+```js
+const userId = new Signal(1);
+
+const unsubscribe = reactive(() => {
+  const socket = new WebSocket(`/users/${userId.get()}/feed`);
+
+  return () => socket.close();
+});
+
+userId.set(2); // closes socket #1, opens socket #2
+userId.set(3); // closes socket #2, opens socket #3
+unsubscribe();  // closes socket #3, no more runs
+```
+
+Each run's cleanup is captured as a closure at run time, so it sees the resources allocated **during that run** — not later ones. You always have exactly one resource alive at a time.
+
+Common patterns:
+
+```js
+// Event listener
+reactive(() => {
+  const handler = (e) => log(currentTarget.get(), e);
+  window.addEventListener('click', handler);
+  return () => window.removeEventListener('click', handler);
+});
+
+// Interval timer
+reactive(() => {
+  const id = setInterval(() => refresh(userId.get()), 5000);
+  return () => clearInterval(id);
+});
+
+// Abortable fetch
+reactive(() => {
+  const controller = new AbortController();
+  fetch(`/api/users/${userId.get()}`, { signal: controller.signal })
+    .then(r => r.json())
+    .then(data => userData.set(data));
+  return () => controller.abort();
+});
+```
+
+Without cleanup, rapid signal updates would pile up listeners, timers, or in-flight requests. The cleanup hook gives each run a paired teardown.
+
+If your effect doesn't return anything (or returns something that isn't a function), no cleanup runs — the return-a-function contract is fully opt-in.
+
 ## Layer 3: `computed(fn)`
 
 `reactive()` + a `Signal` to hold the result. Use when you want a *derived value* you can pass around, render, or subscribe to:
