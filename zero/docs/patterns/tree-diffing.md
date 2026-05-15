@@ -317,3 +317,21 @@ items.set([
   { id: 2, name: 'B' }
 ]);
 ```
+
+## Filtering vs. Visibility for Reorderable Lists
+
+> ⚠️ **Open design question — not yet illustrated with a worked example.**
+
+When a list both **reorders** (by sort criterion) and **filters** (e.g. a "show completed" toggle), you have a choice with different trade-offs:
+
+**Approach A — Filter the array (hidden items leave the DOM):**
+A `computed()` returns the filtered+sorted array. The keyed reconciler **removes** nodes when an item is filtered out and **re-creates** them when it comes back. Each reappearance is a fresh DOM node — focus, scroll position, input values, and CSS transitions on those nodes are lost.
+
+Correct for: true add/remove scenarios (search results, pagination, deletes).
+
+**Approach B — Render all items, toggle CSS visibility:**
+The `computed()` only sorts (no filter). All `<li>` nodes are always mounted, with a per-item `computed()` driving `style.display`. The same DOM instances persist across toggles. The reconciler slides existing nodes when sort changes. Focus / scroll / input state survives.
+
+Correct for: *view filters* over a stable item set (show/hide completed, severity filters).
+
+**TODO:** add a worked Approach-B example (a todo list that sorts by priority and toggles completed visibility), and call out the choice clearly so readers don't reach for Approach A by default when they actually want B.
