@@ -480,6 +480,61 @@ test('computed: chained computed signals', () => {
   assertEquals(quadrupled.get(), 20);
 });
 
+test('Signal child: HTMLElement-valued signal renders as element', () => {
+  const inner = createElement('strong', {}, 'bold');
+  const child = new Signal(inner);
+  const div = createElement('div', {}, child);
+
+  assertEquals(div.childNodes.length, 1);
+  assertEquals(div.childNodes[0], inner);
+  assertEquals(div.innerHTML, '<strong>bold</strong>');
+});
+
+test('Signal child: swaps element when signal value changes', () => {
+  const a = createElement('span', {}, 'A');
+  const b = createElement('em', {}, 'B');
+  const child = new Signal(a);
+  const div = createElement('div', {}, child);
+
+  assertEquals(div.childNodes[0], a);
+  child.set(b);
+  assertEquals(div.childNodes[0], b);
+  assertEquals(div.childNodes.length, 1);
+});
+
+test('Signal child: swaps between text and element', () => {
+  const elem = createElement('strong', {}, 'bold');
+  const child = new Signal('text value');
+  const div = createElement('div', {}, 'before-', child, '-after');
+
+  assertEquals(div.textContent, 'before-text value-after');
+
+  child.set(elem);
+  assertEquals(div.childNodes.length, 3);
+  assertEquals(div.childNodes[1], elem);
+  assertEquals(div.innerHTML, 'before-<strong>bold</strong>-after');
+
+  child.set('back to text');
+  assertEquals(div.textContent, 'before-back to text-after');
+});
+
+test('Signal child: computed returning element rerenders on dependency change', () => {
+  const isVisible = new Signal(true);
+  const content = computed(() =>
+    isVisible.get()
+      ? createElement('div', { attributes: { id: 'visible' } }, 'V')
+      : createElement('span', { attributes: { id: 'hidden' } }, 'H')
+  );
+
+  const app = createElement('section', {}, content);
+  assertEquals(app.querySelector('#visible').textContent, 'V');
+  assert(!app.querySelector('#hidden'));
+
+  isVisible.set(false);
+  assertEquals(app.querySelector('#hidden').textContent, 'H');
+  assert(!app.querySelector('#visible'));
+});
+
 test('computed: notifies its own subscribers', () => {
   const a = new Signal(1);
   const doubled = computed(() => a.get() * 2);

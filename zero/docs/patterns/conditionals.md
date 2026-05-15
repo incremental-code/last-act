@@ -20,22 +20,16 @@ const header = renderHeader();
 
 ## Conditional with Reactive Updates
 
-To show/hide elements when state changes, use a signal to track the rendered element:
+To show/hide elements when state changes, use `computed()` — its value can be a DOM element, and Zero will swap the rendered node in place:
 
 ```js
 const isVisible = new Signal(true);
 
-function renderContent() {
-  return isVisible.get()
+const content = computed(() =>
+  isVisible.get()
     ? createElement('div', {}, 'Content is visible')
-    : null;
-}
-
-const content = new Signal(renderContent());
-
-isVisible.subscribe(() => {
-  content.set(renderContent());
-});
+    : null
+);
 
 const app = createElement('div', {},
   createElement('button', {
@@ -70,28 +64,23 @@ isOpen.subscribe(() => {
 
 ## Multiple Conditions
 
+`computed()` auto-tracks every signal it reads — you don't need to list them:
+
 ```js
 const status = new Signal('loading'); // 'loading' | 'success' | 'error'
 const data = new Signal(null);
 const error = new Signal(null);
 
-function renderStatus() {
-  const s = status.get();
-  
-  if (s === 'loading') {
-    return createElement('div', {}, 'Loading...');
-  } else if (s === 'success') {
-    return createElement('div', {}, 'Data: ', JSON.stringify(data.get()));
-  } else if (s === 'error') {
-    return createElement('div', { attributes: { class: 'error' } }, error.get());
+const content = computed(() => {
+  switch (status.get()) {
+    case 'loading':
+      return createElement('div', {}, 'Loading...');
+    case 'success':
+      return createElement('div', {}, 'Data: ', JSON.stringify(data.get()));
+    case 'error':
+      return createElement('div', { attributes: { class: 'error' } }, error.get());
   }
-}
-
-const content = new Signal(renderStatus());
-
-status.subscribe(() => content.set(renderStatus()));
-data.subscribe(() => content.set(renderStatus()));
-error.subscribe(() => content.set(renderStatus()));
+});
 
 const app = createElement('div', {}, content);
 ```
@@ -101,23 +90,13 @@ const app = createElement('div', {}, content);
 ```js
 const tab = new Signal('home'); // 'home' | 'about' | 'contact'
 
-function renderTab() {
+const tabContent = computed(() => {
   switch (tab.get()) {
-    case 'home':
-      return createElement('div', {}, 'Home content');
-    case 'about':
-      return createElement('div', {}, 'About content');
-    case 'contact':
-      return createElement('div', {}, 'Contact content');
-    default:
-      return null;
+    case 'home':    return createElement('div', {}, 'Home content');
+    case 'about':   return createElement('div', {}, 'About content');
+    case 'contact': return createElement('div', {}, 'Contact content');
+    default:        return null;
   }
-}
-
-const tabContent = new Signal(renderTab());
-
-tab.subscribe(() => {
-  tabContent.set(renderTab());
 });
 
 const app = createElement('div', {},
@@ -149,14 +128,10 @@ const button = createElement('button', {
 ```js
 const showDetail = new Signal(false);
 
-function renderDetail() {
-  return showDetail.get() ? createElement('div', {}, 'Details...') : null;
-}
+const detail = computed(() =>
+  showDetail.get() ? createElement('div', {}, 'Details...') : null
+);
 
-const detail = new Signal(renderDetail());
-showDetail.subscribe(() => detail.set(renderDetail()));
-
-// To render the optional element, check if it exists
 const app = createElement('div', {},
   createElement('button', {
     onclick: () => showDetail.set(!showDetail.get())
@@ -183,9 +158,8 @@ isDisabled.subscribe(() => {
 
 ```js
 const items = new Signal([]);
-const isEmpty = computed(() => items.get().length === 0);
 
-function renderItems() {
+const content = computed(() => {
   const list = items.get();
   if (list.length === 0) {
     return createElement('div', {}, 'No items');
@@ -193,13 +167,7 @@ function renderItems() {
   return createElement('ul', {},
     ...list.map(item => createElement('li', {}, item))
   );
-}
-
-const content = new Signal(renderItems());
-
-items.subscribe(() => {
-  content.set(renderItems());
 });
-```
 
-> Note: `computed()` is great for **scalar** derived values (booleans, numbers, strings, class names, attribute values). For derived **DOM elements** that need to be swapped in/out, you still need a manual signal pattern as shown above — `createElement` treats element-valued signals as text content.
+const app = createElement('div', {}, content);
+```

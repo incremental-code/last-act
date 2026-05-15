@@ -270,6 +270,29 @@ const color = computed(() => count.get() > 10 ? 'red' : 'blue');
 
 const display = createElement('div', { style: { color } }, count);
 count.set(15); // text and color both update</code></pre>
+<h2>Computed Returning an Element</h2>
+<code>computed()</code> can return a DOM element — Zero will swap the rendered node in place when dependencies change:
+<pre><code class="language-js">const isLoggedIn = new Signal(false);
+
+const header = computed(() =>
+  isLoggedIn.get()
+    ? createElement('div', {}, 'Welcome back!')
+    : createElement('div', {}, 'Please log in')
+);
+
+const app = createElement('section', {}, header);
+
+isLoggedIn.set(true); // swaps to "Welcome back!" element</code></pre>
+<p>The same signal slot also handles <code>null</code> (renders nothing) and switching between text and elements:</p>
+<pre><code class="language-js">const mode = new Signal('text');
+
+const dynamic = computed(() => {
+  if (mode.get() === 'hidden') return null;
+  if (mode.get() === 'fancy')  return createElement('strong', {}, 'fancy');
+  return 'plain';
+});
+
+const div = createElement('div', {}, 'before-', dynamic, '-after');</code></pre>
 <h2>Chained Computed Values</h2>
 <p>A <code>computed</code> can depend on other <code>computed</code> signals — updates cascade automatically:</p>
 <pre><code class="language-js">const firstName = new Signal('John');
@@ -384,6 +407,7 @@ userId.subscribe(async () => {
 <p>Reach for <code>computed()</code> when:</p>
 <ul>
 <li>The value is <strong>derived</strong> from other signals (filter, map, sum, format)</li>
+<li>The value is a <strong>conditionally rendered element or fragment</strong></li>
 <li>Multiple things consume the derived value (compute once, share)</li>
 <li>The function reads from signals that may grow or shrink over time (auto-tracking handles it)</li>
 </ul>

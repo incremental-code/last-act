@@ -42,6 +42,38 @@ const display = createElement('div', { style: { color } }, count);
 count.set(15); // text and color both update
 ```
 
+## Computed Returning an Element
+
+`computed()` can return a DOM element — Zero will swap the rendered node in place when dependencies change:
+
+```js
+const isLoggedIn = new Signal(false);
+
+const header = computed(() =>
+  isLoggedIn.get()
+    ? createElement('div', {}, 'Welcome back!')
+    : createElement('div', {}, 'Please log in')
+);
+
+const app = createElement('section', {}, header);
+
+isLoggedIn.set(true); // swaps to "Welcome back!" element
+```
+
+The same signal slot also handles `null` (renders nothing) and switching between text and elements:
+
+```js
+const mode = new Signal('text');
+
+const dynamic = computed(() => {
+  if (mode.get() === 'hidden') return null;
+  if (mode.get() === 'fancy')  return createElement('strong', {}, 'fancy');
+  return 'plain';
+});
+
+const div = createElement('div', {}, 'before-', dynamic, '-after');
+```
+
 ## Chained Computed Values
 
 A `computed` can depend on other `computed` signals — updates cascade automatically:
@@ -195,6 +227,7 @@ userId.subscribe(async () => {
 
 Reach for `computed()` when:
 - The value is **derived** from other signals (filter, map, sum, format)
+- The value is a **conditionally rendered element or fragment**
 - Multiple things consume the derived value (compute once, share)
 - The function reads from signals that may grow or shrink over time (auto-tracking handles it)
 

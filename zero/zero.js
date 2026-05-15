@@ -138,16 +138,10 @@ function createElement(type, props = {}, ...children) {
       } else if (child instanceof HTMLElement) {
         element.appendChild(child);
       } else if (isSignal(child)) {
-        // Check if signal contains an array or scalar value
         if (Array.isArray(child.value)) {
           renderArray(element, child, props.key);
         } else {
-          // Handle scalar signal - create text node and update on changes
-          const textNode = document.createTextNode(child.get());
-          element.appendChild(textNode);
-          child.subscribe((newValue) => {
-            textNode.nodeValue = newValue;
-          });
+          renderSignalChild(element, child);
         }
       }
     }
@@ -215,6 +209,33 @@ function setProperty(element, key, value, propsProxy) {
   }
 }
 
+
+function renderSignalChild(container, signal) {
+  const makeNode = (value) => {
+    if (value instanceof HTMLElement) return value;
+    if (value == null) return document.createTextNode('');
+    return document.createTextNode(value);
+  };
+
+  let currentNode = makeNode(signal.get());
+  container.appendChild(currentNode);
+
+  signal.subscribe((newValue) => {
+    // Same-type fast path for text: just mutate the existing text node
+    if (
+      !(newValue instanceof HTMLElement) &&
+      currentNode.nodeType === 3 // Node.TEXT_NODE
+    ) {
+      currentNode.nodeValue = newValue == null ? '' : newValue;
+      return;
+    }
+
+    // Otherwise swap nodes
+    const newNode = makeNode(newValue);
+    currentNode.replaceWith(newNode);
+    currentNode = newNode;
+  });
+}
 
 function renderArray(container, arraySignal, keyFn) {
   let domMap = new Map(); // Maps key -> DOM node
