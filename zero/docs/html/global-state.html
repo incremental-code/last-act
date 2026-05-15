@@ -332,16 +332,12 @@ function Sidebar() {
   }, '...');
 }</code></pre>
 <h2>Computed Global State</h2>
-<p>Derive global state from other signals:</p>
-<pre><code class="language-js">export const user = new Signal(null);
-export const isAdmin = new Signal(false);
-export const username = new Signal('');
+<p>Derive global state from other signals with <code>computed()</code>:</p>
+<pre><code class="language-js">import { Signal, computed } from './zero.js';
 
-user.subscribe(() => {
-  const u = user.get();
-  isAdmin.set(u?.role === 'admin');
-  username.set(u?.name || 'Guest');
-});</code></pre>
+export const user = new Signal(null);
+export const isAdmin = computed(() => user.get()?.role === 'admin');
+export const username = computed(() => user.get()?.name || 'Guest');</code></pre>
 <h2>Context Provider Pattern</h2>
 <p>Pass state through a component tree:</p>
 <pre><code class="language-js">function App() {

@@ -116,7 +116,6 @@ bindForm(form, formData);
 
 ```js
 const email = new Signal('');
-const emailError = new Signal('');
 
 function validateEmail(value) {
   if (!value) return '';
@@ -125,9 +124,7 @@ function validateEmail(value) {
   return '';
 }
 
-email.subscribe((value) => {
-  emailError.set(validateEmail(value));
-});
+const emailError = computed(() => validateEmail(email.get()));
 
 const form = createElement('div', {},
   createElement('input', {

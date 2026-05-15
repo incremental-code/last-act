@@ -29,11 +29,7 @@ const expensiveCompute = createMemoized((n) => {
 });
 
 const input = new Signal(10);
-const result = new Signal(expensiveCompute(input.get()));
-
-input.subscribe(() => {
-  result.set(expensiveCompute(input.get()));
-});
+const result = computed(() => expensiveCompute(input.get()));
 ```
 
 ## Memoize with Multiple Dependencies
@@ -67,15 +63,10 @@ const filterAndSort = createMemoized(
 const items = new Signal([...]);
 const query = new Signal('');
 const sortBy = new Signal('name');
-const results = new Signal([]);
 
-function update() {
-  results.set(filterAndSort(items.get(), query.get(), sortBy.get()));
-}
-
-items.subscribe(update);
-query.subscribe(update);
-sortBy.subscribe(update);
+const results = computed(() =>
+  filterAndSort(items.get(), query.get(), sortBy.get())
+);
 ```
 
 ## Debounced Updates

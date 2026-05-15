@@ -107,18 +107,14 @@ function Sidebar() {
 
 ## Computed Global State
 
-Derive global state from other signals:
+Derive global state from other signals with `computed()`:
 
 ```js
-export const user = new Signal(null);
-export const isAdmin = new Signal(false);
-export const username = new Signal('');
+import { Signal, computed } from './zero.js';
 
-user.subscribe(() => {
-  const u = user.get();
-  isAdmin.set(u?.role === 'admin');
-  username.set(u?.name || 'Guest');
-});
+export const user = new Signal(null);
+export const isAdmin = computed(() => user.get()?.role === 'admin');
+export const username = computed(() => user.get()?.name || 'Guest');
 ```
 
 ## Context Provider Pattern

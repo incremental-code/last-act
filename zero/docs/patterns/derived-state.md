@@ -1,18 +1,20 @@
 # Derived State
 
-Computing values from other signals, with caching and subscription patterns.
+Computing values from other signals using `computed()`.
 
 ## Simple Derived Value
 
 Derive a value from a single signal:
 
 ```js
-const age = new Signal(25);
-const nextYear = new Signal(age.get() + 1);
+import { Signal, computed } from './zero.js';
 
-age.subscribe(() => {
-  nextYear.set(age.get() + 1);
-});
+const age = new Signal(25);
+const nextYear = computed(() => age.get() + 1);
+
+console.log(nextYear.get()); // 26
+age.set(30);
+console.log(nextYear.get()); // 31
 ```
 
 ## Derived from Multiple Signals
@@ -20,50 +22,33 @@ age.subscribe(() => {
 ```js
 const firstName = new Signal('John');
 const lastName = new Signal('Doe');
-const fullName = new Signal(`${firstName.get()} ${lastName.get()}`);
 
-firstName.subscribe(() => {
-  fullName.set(`${firstName.get()} ${lastName.get()}`);
-});
+const fullName = computed(() => `${firstName.get()} ${lastName.get()}`);
 
-lastName.subscribe(() => {
-  fullName.set(`${firstName.get()} ${lastName.get()}`);
-});
-```
-
-## Computed Property Helper
-
-Create a helper to reduce boilerplate:
-
-```js
-function derived(fn, dependencies) {
-  const signal = new Signal(fn());
-  
-  dependencies.forEach(dep => {
-    dep.subscribe(() => {
-      signal.set(fn());
-    });
-  });
-  
-  return signal;
-}
-
-// Usage
-const firstName = new Signal('John');
-const lastName = new Signal('Doe');
-
-const fullName = derived(
-  () => `${firstName.get()} ${lastName.get()}`,
-  [firstName, lastName]
-);
-
+console.log(fullName.get()); // "John Doe"
 firstName.set('Jane');
 console.log(fullName.get()); // "Jane Doe"
 ```
 
-## Filtered List
+`computed()` auto-tracks every signal accessed inside the function — no dependency list needed, no manual subscriptions, refactoring stays safe.
 
-Derive a filtered version of a list:
+## Manual Approach (for reference)
+
+The same thing without `computed()`:
+
+```js
+const firstName = new Signal('John');
+const lastName = new Signal('Doe');
+const fullName = new Signal(`${firstName.get()} ${lastName.get()}`);
+
+const update = () => fullName.set(`${firstName.get()} ${lastName.get()}`);
+firstName.subscribe(update);
+lastName.subscribe(update);
+```
+
+Easy to forget a subscribe, easy to add a dependency without updating the list. Prefer `computed()`.
+
+## Filtered List
 
 ```js
 const items = new Signal([
@@ -72,11 +57,7 @@ const items = new Signal([
   { id: 3, name: 'Cherry', done: false }
 ]);
 
-const completedItems = new Signal(items.get().filter(i => i.done));
-
-items.subscribe(() => {
-  completedItems.set(items.get().filter(i => i.done));
-});
+const completedItems = computed(() => items.get().filter(i => i.done));
 ```
 
 ## Sorted List
@@ -88,37 +69,9 @@ const items = new Signal([
   { id: 2, name: 'Banana' }
 ]);
 
-const sortedByName = new Signal([...items.get()].sort((a, b) => a.name.localeCompare(b.name)));
-
-items.subscribe(() => {
-  sortedByName.set([...items.get()].sort((a, b) => a.name.localeCompare(b.name)));
-});
-```
-
-## Memoized Computation
-
-Cache expensive computations:
-
-```js
-let memoizedResult = null;
-let lastInputValue = null;
-
-function expensiveComputation(value) {
-  if (value === lastInputValue && memoizedResult !== null) {
-    return memoizedResult;
-  }
-  
-  lastInputValue = value;
-  memoizedResult = performHeavyCalculation(value);
-  return memoizedResult;
-}
-
-const input = new Signal(10);
-const result = new Signal(expensiveComputation(input.get()));
-
-input.subscribe(() => {
-  result.set(expensiveComputation(input.get()));
-});
+const sortedByName = computed(() =>
+  [...items.get()].sort((a, b) => a.name.localeCompare(b.name))
+);
 ```
 
 ## Aggregated Statistics
@@ -130,19 +83,14 @@ const items = new Signal([
   { price: 30 }
 ]);
 
-function calculateStats() {
+const stats = computed(() => {
   const list = items.get();
+  const total = list.reduce((sum, item) => sum + item.price, 0);
   return {
-    total: list.reduce((sum, item) => sum + item.price, 0),
-    average: list.length > 0 ? list.reduce((sum, item) => sum + item.price, 0) / list.length : 0,
+    total,
+    average: list.length > 0 ? total / list.length : 0,
     count: list.length
   };
-}
-
-const stats = new Signal(calculateStats());
-
-items.subscribe(() => {
-  stats.set(calculateStats());
 });
 ```
 
@@ -150,72 +98,75 @@ items.subscribe(() => {
 
 ```js
 const items = new Signal([]);
-const isEmpty = new Signal(true);
-const hasItems = new Signal(false);
 
-items.subscribe(() => {
-  isEmpty.set(items.get().length === 0);
-  hasItems.set(items.get().length > 0);
-});
+const isEmpty = computed(() => items.get().length === 0);
+const hasItems = computed(() => items.get().length > 0);
 ```
 
 ## Conditional State
 
 ```js
 const user = new Signal(null);
-const isLoggedIn = new Signal(false);
-const username = new Signal('');
 
-user.subscribe(() => {
-  const u = user.get();
-  isLoggedIn.set(u !== null);
-  username.set(u?.name || '');
-});
+const isLoggedIn = computed(() => user.get() !== null);
+const username = computed(() => user.get()?.name || '');
 ```
 
 ## Chained Derivations
 
+Computed signals can depend on other computed signals:
+
 ```js
+const items = new Signal([
+  { name: 'Apple' },
+  { name: 'Banana' },
+  { name: 'Cherry' }
+]);
 const query = new Signal('');
 
-// Filter items based on query
-const filteredItems = new Signal([]);
+const filteredItems = computed(() =>
+  items.get().filter(item => item.name.includes(query.get()))
+);
 
-// Count filtered items
-const filteredCount = new Signal(0);
-
-function updateFiltered() {
-  const results = items.get().filter(item => item.name.includes(query.get()));
-  filteredItems.set(results);
-  filteredCount.set(results.length);
-}
-
-query.subscribe(updateFiltered);
-items.subscribe(updateFiltered);
+const filteredCount = computed(() => filteredItems.get().length);
+const hasResults = computed(() => filteredCount.get() > 0);
 ```
 
-## Performance Note: Avoid Circular Dependencies
+Changes to `query` or `items` cascade through `filteredItems` → `filteredCount` → `hasResults` automatically.
 
-Don't create loops of subscriptions:
+## Conditional Dependencies
+
+Because `computed()` re-tracks on every run, a signal that's only accessed in one branch becomes a dependency only when that branch executes:
 
 ```js
-// ❌ AVOID THIS - creates infinite loop
-const a = new Signal(1);
-const b = new Signal(a.get() + 1);
+const useFirstName = new Signal(true);
+const firstName = new Signal('John');
+const lastName = new Signal('Doe');
 
-a.subscribe(() => b.set(b.get() + 1));
-b.subscribe(() => a.set(a.get() + 1));
+const displayName = computed(() => {
+  return useFirstName.get() ? firstName.get() : lastName.get();
+});
 
-a.set(5); // Infinite loop!
+// While useFirstName is true, changes to lastName don't trigger recompute
+lastName.set('Smith'); // no recompute
+
+useFirstName.set(false); // recompute, now lastName is a dependency
+lastName.set('Jones'); // recompute
 ```
 
-Instead, derive from source signals only:
+## Avoid Circular Dependencies
+
+Don't have a `computed` write to a signal it reads from — `computed()` is for *deriving* values, not mutating state.
 
 ```js
-// ✓ GOOD
+// ❌ AVOID — writes inside a computed
 const a = new Signal(1);
-const b = new Signal(a.get() + 1);
+const b = computed(() => {
+  a.set(a.get() + 1); // don't do this
+  return a.get() * 2;
+});
 
-a.subscribe(() => b.set(a.get() + 1));
-// b never triggers updates to a
+// ✓ GOOD — derive only
+const a = new Signal(1);
+const b = computed(() => a.get() * 2);
 ```

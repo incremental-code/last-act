@@ -132,13 +132,11 @@ const app = createElement('div', {},
 
 ## Class Toggling
 
+Use `computed()` to derive the class from state:
+
 ```js
 const isActive = new Signal(false);
-const className = new Signal('inactive');
-
-isActive.subscribe(() => {
-  className.set(isActive.get() ? 'active' : 'inactive');
-});
+const className = computed(() => isActive.get() ? 'active' : 'inactive');
 
 const button = createElement('button', {
   attributes: { class: className },
@@ -185,7 +183,7 @@ isDisabled.subscribe(() => {
 
 ```js
 const items = new Signal([]);
-const isEmpty = new Signal(true);
+const isEmpty = computed(() => items.get().length === 0);
 
 function renderItems() {
   const list = items.get();
@@ -200,7 +198,8 @@ function renderItems() {
 const content = new Signal(renderItems());
 
 items.subscribe(() => {
-  isEmpty.set(items.get().length === 0);
   content.set(renderItems());
 });
 ```
+
+> Note: `computed()` is great for **scalar** derived values (booleans, numbers, strings, class names, attribute values). For derived **DOM elements** that need to be swapped in/out, you still need a manual signal pattern as shown above — `createElement` treats element-valued signals as text content.

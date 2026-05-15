@@ -264,31 +264,13 @@ const fullName = useMemo(
   [firstName, lastName]
 );</code></pre>
 <strong>Zero:</strong>
-<pre><code class="language-js">const firstName = new Signal('John');
+<pre><code class="language-js">import { Signal, computed } from './zero.js';
+
+const firstName = new Signal('John');
 const lastName = new Signal('Doe');
 
-const fullName = new Signal(`${firstName.get()} ${lastName.get()}`);
-
-firstName.subscribe(() => {
-  fullName.set(`${firstName.get()} ${lastName.get()}`);
-});
-
-lastName.subscribe(() => {
-  fullName.set(`${firstName.get()} ${lastName.get()}`);
-});</code></pre>
-<p>Or with a helper:</p>
-<pre><code class="language-js">function computed(fn, deps) {
-  const signal = new Signal(fn());
-  deps.forEach(dep => {
-    dep.subscribe(() => signal.set(fn()));
-  });
-  return signal;
-}
-
-const fullName = computed(
-  () => `${firstName.get()} ${lastName.get()}`,
-  [firstName, lastName]
-);</code></pre>
+const fullName = computed(() => `${firstName.get()} ${lastName.get()}`);</code></pre>
+<p>No dependency list — <code>computed()</code> auto-tracks which signals are accessed. Refactoring is safe: add or remove a <code>.get()</code> and the dependencies update themselves.</p>
 <h2>Side Effects (useEffect)</h2>
 <h3>Basic Setup/Cleanup</h3>
 <strong>React:</strong>

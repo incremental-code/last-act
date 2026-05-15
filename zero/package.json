@@ -7,7 +7,9 @@
     "test": "node zero.test.js",
     "test:patterns": "node patterns.test.js",
     "test:all": "npm run test && npm run test:patterns",
-    "build": "node build.js"
+    "build": "node build.js",
+    "build:docs": "node build-docs.js",
+    "build:all": "npm run build && npm run build:docs"
   },
   "devDependencies": {
     "esbuild": "^0.28.0",

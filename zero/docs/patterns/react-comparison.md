@@ -43,35 +43,15 @@ const fullName = useMemo(
 
 **Zero:**
 ```js
+import { Signal, computed } from './zero.js';
+
 const firstName = new Signal('John');
 const lastName = new Signal('Doe');
 
-const fullName = new Signal(`${firstName.get()} ${lastName.get()}`);
-
-firstName.subscribe(() => {
-  fullName.set(`${firstName.get()} ${lastName.get()}`);
-});
-
-lastName.subscribe(() => {
-  fullName.set(`${firstName.get()} ${lastName.get()}`);
-});
+const fullName = computed(() => `${firstName.get()} ${lastName.get()}`);
 ```
 
-Or with a helper:
-```js
-function computed(fn, deps) {
-  const signal = new Signal(fn());
-  deps.forEach(dep => {
-    dep.subscribe(() => signal.set(fn()));
-  });
-  return signal;
-}
-
-const fullName = computed(
-  () => `${firstName.get()} ${lastName.get()}`,
-  [firstName, lastName]
-);
-```
+No dependency list — `computed()` auto-tracks which signals are accessed. Refactoring is safe: add or remove a `.get()` and the dependencies update themselves.
 
 ## Side Effects (useEffect)
 

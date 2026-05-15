@@ -267,11 +267,7 @@ const expensiveCompute = createMemoized((n) => {
 });
 
 const input = new Signal(10);
-const result = new Signal(expensiveCompute(input.get()));
-
-input.subscribe(() => {
-  result.set(expensiveCompute(input.get()));
-});</code></pre>
+const result = computed(() => expensiveCompute(input.get()));</code></pre>
 <h2>Memoize with Multiple Dependencies</h2>
 <pre><code class="language-js">function createMemoized(fn, getKeys) {
   let cachedResult = null;
@@ -301,15 +297,10 @@ const filterAndSort = createMemoized(
 const items = new Signal([...]);
 const query = new Signal('');
 const sortBy = new Signal('name');
-const results = new Signal([]);
 
-function update() {
-  results.set(filterAndSort(items.get(), query.get(), sortBy.get()));
-}
-
-items.subscribe(update);
-query.subscribe(update);
-sortBy.subscribe(update);</code></pre>
+const results = computed(() =>
+  filterAndSort(items.get(), query.get(), sortBy.get())
+);</code></pre>
 <h2>Debounced Updates</h2>
 <p>Avoid updating on every keystroke. Use <code>oninput</code> to capture changes immediately, but debounce the expensive operation:</p>
 <pre><code class="language-js">function debounce(fn, delay) {
