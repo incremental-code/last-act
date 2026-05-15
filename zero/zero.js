@@ -1,22 +1,36 @@
+import { Signal as TC39Signal } from 'signal-polyfill';
+
+// Maps TC39 signal internals (State / Computed instances) back to our wrapper
+// objects so that ComputedSignal can subscribe to wrapper signals when syncing
+// its source subscriptions.
+const internalToWrapper = new WeakMap();
+
 let currentTracker = null;
 
 class Signal {
   constructor(value) {
-    this.value = value;
+    this._state = new TC39Signal.State(value);
+    internalToWrapper.set(this._state, this);
+    this._value = value;
     this.subscribers = new Set();
   }
 
   get() {
-    // Record this access if we're in a tracking context
+    // Record this access if we're in a tracking context (used by track())
     if (currentTracker) {
       currentTracker.dependencies.add(this);
     }
-    return this.value;
+    // Delegate to the TC39 State so that any TC39 Computed currently being
+    // evaluated automatically records this signal as one of its sources.
+    return this._state.get();
   }
 
   set(newValue) {
-    if (this.value !== newValue) {
-      this.value = newValue;
+    if (this._value !== newValue) {
+      this._value = newValue;
+      // Update the TC39 State so dependent TC39 Computed signals are marked
+      // dirty before we notify our own subscribers.
+      this._state.set(newValue);
       // Snapshot subscribers so mutations during iteration don't cause re-visits
       const subs = Array.from(this.subscribers);
       subs.forEach(cb => cb(newValue));
@@ -154,11 +168,82 @@ function reactive(fn) {
 class ComputedSignal extends Signal {
   constructor(fn) {
     super(undefined);
-    this._stop = reactive(() => this.set(fn()));
+    // TC39 Computed handles lazy evaluation and dependency tracking.
+    this._computed = new TC39Signal.Computed(fn);
+    internalToWrapper.set(this._computed, this);
+    // Map from each TC39 source (State/Computed) to its unsubscribe function so
+    // we can keep our wrapper-level `source.subscribers` counts accurate and
+    // propagate value changes through the existing overlay mechanism.
+    this._sourceUnsubs = new Map();
+    this._stopped = false;
+    // Initial evaluation — also seeds internalToWrapper entries for sources.
+    this._value = this._computed.get();
+    this._syncSourceSubscriptions();
+  }
+
+  // After (re)evaluation, read the current TC39-level sources with
+  // introspectSources and mirror them as wrapper-level subscriptions.
+  _syncSourceSubscriptions() {
+    const sources = TC39Signal.subtle.introspectSources(this._computed);
+    const newSourceSet = new Set(sources);
+
+    // Remove subscriptions for deps that are no longer active.
+    for (const [src, unsub] of this._sourceUnsubs) {
+      if (!newSourceSet.has(src)) {
+        unsub();
+        this._sourceUnsubs.delete(src);
+      }
+    }
+
+    // Add subscriptions for newly discovered deps.
+    for (const src of sources) {
+      if (!this._sourceUnsubs.has(src)) {
+        const wrapper = internalToWrapper.get(src);
+        if (wrapper) {
+          const unsub = wrapper.subscribe(() => this._recompute());
+          this._sourceUnsubs.set(src, unsub);
+        }
+      }
+    }
+  }
+
+  _recompute() {
+    if (this._stopped) return;
+    const newValue = this._computed.get();
+    // Sync subscriptions in case dynamic deps changed during this evaluation.
+    this._syncSourceSubscriptions();
+    if (this._value !== newValue) {
+      this._value = newValue;
+      const subs = Array.from(this.subscribers);
+      subs.forEach(cb => cb(newValue));
+    }
+  }
+
+  get() {
+    if (currentTracker) {
+      currentTracker.dependencies.add(this);
+    }
+    if (this._stopped) return this._value;
+    // Keep _value in sync so stop() captures the latest cached result.
+    const val = this._computed.get();
+    this._value = val;
+    return val;
+  }
+
+  // ComputedSignal is read-only; override to prevent accidental writes.
+  set() {}
+
+  subscribe(callback) {
+    this.subscribers.add(callback);
+    return () => this.subscribers.delete(callback);
   }
 
   stop() {
-    this._stop();
+    this._stopped = true;
+    for (const [, unsub] of this._sourceUnsubs) {
+      unsub();
+    }
+    this._sourceUnsubs.clear();
   }
 }
 
@@ -202,7 +287,7 @@ function createElement(type, props = {}, ...children) {
       } else if (child instanceof HTMLElement) {
         element.appendChild(child);
       } else if (isSignal(child)) {
-        if (Array.isArray(child.value)) {
+        if (Array.isArray(child.get())) {
           renderArray(element, child, props.key);
         } else {
           renderSignalChild(element, child);
