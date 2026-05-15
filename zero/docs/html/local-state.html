@@ -265,10 +265,9 @@ document.body.appendChild(counter);</code></pre>
   return createElement('div', {},
     createElement('button', {
       onclick: () => isOpen.set(!isOpen.get()),
-      textContent: isOpen.get() ? 'Close' : 'Open'
-    }),
+    }, computed(() => isOpen.get() ? 'Close' : 'Open')),
     createElement('div', {
-      style: { display: isOpen.get() ? 'block' : 'none' }
+      style: { display: computed(() => isOpen.get() ? 'block' : 'none') }
     }, 'Collapsed content')
   );
 }</code></pre>

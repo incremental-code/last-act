@@ -360,14 +360,10 @@ const form = createElement('form', {
   createElement('button', {
     type: 'submit',
     disabled: isSubmitting,
-    textContent: isSubmitting.get() ? 'Submitting...' : 'Submit'
-  })
-);
-
-isSubmitting.subscribe(() => {
-  const btn = form.querySelector('button');
-  btn.textContent = isSubmitting.get() ? 'Submitting...' : 'Submit';
-});</code></pre>
+  }, computed(() => isSubmitting.get() ? 'Submitting...' : 'Submit'))
+);</code></pre>
+<p>The button's label is a <code>computed()</code> passed as a <strong>child</strong> rather than as a <code>textContent</code> prop. That way the value is read inside the computed (so the dependency on <code>isSubmitting</code> is tracked), and Zero's signal-child handling keeps the text in sync.</p>
+<p>> ⚠️ Don't write <code>textContent: isSubmitting.get() ? ... : ...</code> — that reads the signal immediately and passes the resulting string by value, with no reactivity. The button's text would freeze at whatever <code>isSubmitting</code> happened to be at render time.</p>
 <h2>Form Validation</h2>
 <pre><code class="language-js">const email = new Signal('');
 

@@ -112,23 +112,20 @@ const button = createElement('button', {
 isActive.set(true);  // button gets class="true"
 ```
 
-For more complex class logic, manage the class attribute in a derived signal:
+For more complex class logic, derive the class string with `computed()`:
 
 ```js
+import { Signal, computed, createElement } from './zero.js';
+
 const isActive = new Signal(false);
 const isLoading = new Signal(false);
 
-function getClasses() {
+const classSignal = computed(() => {
   const classes = [];
   if (isActive.get()) classes.push('active');
   if (isLoading.get()) classes.push('loading');
   return classes.join(' ');
-}
-
-const classSignal = new Signal(getClasses());
-
-isActive.subscribe(() => classSignal.set(getClasses()));
-isLoading.subscribe(() => classSignal.set(getClasses()));
+});
 
 const button = createElement('button', {
   attributes: { class: classSignal }
@@ -157,12 +154,9 @@ For more control over list rendering, see the [Components guide](./components.md
 ```js
 const showDetail = new Signal(false);
 
-function renderDetail() {
-  return showDetail.get() ? createElement('div', {}, 'Details...') : null;
-}
-
-const detailSignal = new Signal(renderDetail());
-showDetail.subscribe(() => detailSignal.set(renderDetail()));
+const detailSignal = computed(() =>
+  showDetail.get() ? createElement('div', {}, 'Details...') : null
+);
 ```
 
 **Disable based on State:**
@@ -180,11 +174,48 @@ const progress = new Signal(50);
 
 const progressBar = createElement('div', {
   style: {
-    width: progress.get() + '%'
+    width: computed(() => progress.get() + '%')
   }
 });
+```
 
-progress.subscribe(() => {
-  progressBar.style.width = progress.get() + '%';
+## Common Trap: Don't read signals eagerly in prop expressions
+
+Anywhere you pass a value to `createElement`, the framework only knows it's a signal if you pass the **signal itself**, not the result of `.get()`. The trap:
+
+```js
+// ❌ BROKEN — reads the signal at render time, value never updates
+createElement('button', {
+  textContent: isSubmitting.get() ? 'Submitting...' : 'Submit'
+});
+
+// ❌ BROKEN — same reason, just less obvious
+createElement('div', {
+  style: { width: progress.get() + '%' }
 });
 ```
+
+In both cases, `signal.get()` runs immediately and you pass a plain string to Zero. The framework can't tell that the value was derived from a signal — there's nothing to subscribe to.
+
+The fix is to **wrap the expression in `computed()`** so the read happens inside the reactive context:
+
+```js
+// ✓ WORKS — computed() tracks the .get() call and updates as the signal changes
+createElement('button', {},
+  computed(() => isSubmitting.get() ? 'Submitting...' : 'Submit')
+);
+
+createElement('div', {
+  style: { width: computed(() => progress.get() + '%') }
+});
+```
+
+Or, for the common case of "just use the signal's value as-is," **pass the signal directly**:
+
+```js
+const message = new Signal('Hello');
+createElement('span', {}, message);     // text updates when message changes
+createElement('input', { value: message }); // value attribute tracks the signal
+```
+
+Rule of thumb: if you find yourself calling `.get()` while building a `createElement` call, ask whether you actually want reactivity at that spot. If yes, you need a signal or a `computed()` there — not the result of `.get()`.

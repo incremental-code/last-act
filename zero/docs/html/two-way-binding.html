@@ -444,14 +444,9 @@ const slider = createElement('input', {
   onchange: (e) => volume.set(parseInt(e.target.value))
 });
 
-const volumeDisplay = createElement('span', {
-  textContent: volume.get() + '%'
-});
-
-volume.subscribe(() => {
-  slider.value = volume.get();
-  volumeDisplay.textContent = volume.get() + '%';
-});</code></pre>
+const volumeDisplay = createElement('span', {},
+  computed(() => volume.get() + '%')
+);</code></pre>
 <h2>Conditional Two-Way Binding</h2>
 <p>Bind different inputs based on state:</p>
 <pre><code class="language-js">const bindingType = new Signal('text'); // 'text' | 'checkbox' | 'select'

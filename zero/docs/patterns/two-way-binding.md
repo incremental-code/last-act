@@ -233,14 +233,9 @@ const slider = createElement('input', {
   onchange: (e) => volume.set(parseInt(e.target.value))
 });
 
-const volumeDisplay = createElement('span', {
-  textContent: volume.get() + '%'
-});
-
-volume.subscribe(() => {
-  slider.value = volume.get();
-  volumeDisplay.textContent = volume.get() + '%';
-});
+const volumeDisplay = createElement('span', {},
+  computed(() => volume.get() + '%')
+);
 ```
 
 ## Conditional Two-Way Binding
