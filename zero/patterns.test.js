@@ -4,7 +4,7 @@ const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
 global.document = dom.window.document;
 global.HTMLElement = dom.window.HTMLElement;
 
-import { Signal, createElement as h } from './zero.js';
+import { Signal, computed, reactive, createElement as h } from './zero.js';
 
 let testCount = 0;
 let passCount = 0;
@@ -59,7 +59,6 @@ test('Forms: email input binds to signal', () => {
 
 test('Forms: validation updates error signal', () => {
   const email = new Signal('');
-  const emailError = new Signal('');
 
   function validateEmail(value) {
     if (!value) return 'Email is required';
@@ -67,9 +66,7 @@ test('Forms: validation updates error signal', () => {
     return '';
   }
 
-  email.subscribe((value) => {
-    emailError.set(validateEmail(value));
-  });
+  const emailError = computed(() => validateEmail(email.get()));
 
   email.set('invalid');
   assertEquals(emailError.get(), 'Invalid email');
@@ -146,15 +143,7 @@ test('Local State: modal visibility', () => {
 test('Derived State: full name from first + last', () => {
   const firstName = new Signal('John');
   const lastName = new Signal('Doe');
-  const fullName = new Signal(`${firstName.get()} ${lastName.get()}`);
-
-  firstName.subscribe(() => {
-    fullName.set(`${firstName.get()} ${lastName.get()}`);
-  });
-
-  lastName.subscribe(() => {
-    fullName.set(`${firstName.get()} ${lastName.get()}`);
-  });
+  const fullName = computed(() => `${firstName.get()} ${lastName.get()}`);
 
   assertEquals(fullName.get(), 'John Doe');
 
@@ -166,19 +155,9 @@ test('Derived State: full name from first + last', () => {
 });
 
 test('Derived State: computed helper', () => {
-  function computed(fn, dependencies) {
-    const signal = new Signal(fn());
-    dependencies.forEach(dep => {
-      dep.subscribe(() => {
-        signal.set(fn());
-      });
-    });
-    return signal;
-  }
-
   const x = new Signal(5);
   const y = new Signal(3);
-  const sum = computed(() => x.get() + y.get(), [x, y]);
+  const sum = computed(() => x.get() + y.get());
 
   assertEquals(sum.get(), 8);
 
@@ -196,11 +175,7 @@ test('Derived State: filtered list', () => {
     { id: 3, done: false }
   ]);
 
-  const doneItems = new Signal(items.get().filter(i => i.done));
-
-  items.subscribe(() => {
-    doneItems.set(items.get().filter(i => i.done));
-  });
+  const doneItems = computed(() => items.get().filter(i => i.done));
 
   assertEquals(doneItems.get().length, 1);
   assertEquals(doneItems.get()[0].id, 2);
@@ -266,18 +241,9 @@ test('Computed Properties: list statistics', () => {
     { price: 30 }
   ]);
 
-  const total = new Signal(items.get().reduce((sum, item) => sum + item.price, 0));
-  const count = new Signal(items.get().length);
-  const average = new Signal(count.get() > 0 ? total.get() / count.get() : 0);
-
-  items.subscribe(() => {
-    const list = items.get();
-    const newTotal = list.reduce((sum, item) => sum + item.price, 0);
-    const newCount = list.length;
-    total.set(newTotal);
-    count.set(newCount);
-    average.set(newCount > 0 ? newTotal / newCount : 0);
-  });
+  const total = computed(() => items.get().reduce((sum, item) => sum + item.price, 0));
+  const count = computed(() => items.get().length);
+  const average = computed(() => count.get() > 0 ? total.get() / count.get() : 0);
 
   assertEquals(total.get(), 60);
   assertEquals(count.get(), 3);
@@ -292,11 +258,7 @@ test('Computed Properties: list statistics', () => {
 
 test('Computed Properties: boolean flags', () => {
   const items = new Signal([]);
-  const isEmpty = new Signal(true);
-
-  items.subscribe(() => {
-    isEmpty.set(items.get().length === 0);
-  });
+  const isEmpty = computed(() => items.get().length === 0);
 
   assertEquals(isEmpty.get(), true);
 
@@ -357,11 +319,7 @@ test('Conditionals: reactive conditional rendering', () => {
     return showDetail.get() ? 'Details here' : null;
   }
 
-  const content = new Signal(renderDetail());
-
-  showDetail.subscribe(() => {
-    content.set(renderDetail());
-  });
+  const content = computed(() => renderDetail());
 
   assertEquals(content.get(), null);
 
@@ -378,29 +336,22 @@ test('Conditionals: reactive conditional rendering', () => {
 
 test('Memoization: debounced search', () => {
   const query = new Signal('');
-  const results = new Signal([]);
   const allItems = ['Apple', 'Apricot', 'Banana', 'Blueberry'];
-  let debounceTimer = null;
 
-  function performSearch() {
+  // Derived results via computed — lazily re-evaluated on each get()
+  const results = computed(() => {
     const q = query.get().toLowerCase();
-    results.set(q ? allItems.filter(item => item.toLowerCase().includes(q)) : []);
-  }
-
-  query.subscribe(() => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(performSearch, 300);
+    return q ? allItems.filter(item => item.toLowerCase().includes(q)) : [];
   });
 
+  assertEquals(results.get().length, 0);
+
   query.set('app');
-  // Results not updated yet (debounced)
-
-  // Simulate waiting 300ms
-  clearTimeout(debounceTimer);
-  performSearch();
-
   assertEquals(results.get().length, 1);
   assertEquals(results.get()[0], 'Apple');
+
+  query.set('b');
+  assertEquals(results.get().length, 2);
 });
 
 test('Memoization: cached computation', () => {
@@ -526,11 +477,7 @@ test('Batching: list operations in single update', () => {
     items.set(updated); // Single update
   }
 
-  const selectedCount = new Signal(0);
-
-  items.subscribe(() => {
-    selectedCount.set(items.get().filter(i => i.selected).length);
-  });
+  const selectedCount = computed(() => items.get().filter(i => i.selected).length);
 
   selectMultiple([1, 2]);
 
@@ -553,15 +500,7 @@ test('Lists: array children with key function', () => {
     return h('div', {}, item.text);
   }
 
-  function renderItems() {
-    return items.get().map(renderItem);
-  }
-
-  const itemElements = new Signal(renderItems());
-
-  items.subscribe(() => {
-    itemElements.set(renderItems());
-  });
+  const itemElements = computed(() => items.get().map(renderItem));
 
   assertEquals(itemElements.get().length, 2);
 
@@ -684,21 +623,18 @@ test('Lifecycle: element removal cleanup', () => {
 });
 
 test('Lifecycle: subscription cleanup', () => {
-  let unsubscribeCalled = false;
+  let cleanupCalled = false;
   const signal = new Signal(0);
 
-  const unsubscribe = signal.subscribe(() => {
-    // Do something
+  // reactive() returns a dispose function; the callback can return a cleanup
+  const stop = reactive(() => {
+    signal.get();
+    return () => { cleanupCalled = true; };
   });
 
-  const cleanupUnsubscribe = () => {
-    unsubscribeCalled = true;
-    unsubscribe();
-  };
-
-  assert(!unsubscribeCalled);
-  cleanupUnsubscribe();
-  assert(unsubscribeCalled);
+  assert(!cleanupCalled);
+  stop(); // dispose the effect — runs the cleanup synchronously
+  assert(cleanupCalled);
 });
 
 // ============================================================================
