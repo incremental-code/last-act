@@ -266,28 +266,23 @@ function removeNotification(id) {
   notifications.set(current.filter(n => n.id !== id));
 }
 
-// In a component:
-const notificationElements = new Signal([]);
-
-notifications.subscribe(() => {
-  const notifs = notifications.get();
-  notificationElements.set(
-    notifs.map((notif) =>
-      createElement('div', {
-        attributes: {
-          class: 'notification',
-          'data-id': notif.id  // Store ID for keying
-        },
-        style: { background: notif.type === 'error' ? '#ffebee' : '#e8f5e9' }
+// In a component: derive the element array from notifications with computed()
+const notificationElements = computed(() =>
+  notifications.get().map(notif =>
+    createElement('div', {
+      attributes: {
+        class: 'notification',
+        'data-id': notif.id  // Store ID for keying
       },
-        notif.message,
-        createElement('button', {
-          onclick: () => removeNotification(notif.id)
-        }, '✕')
-      )
+      style: { background: notif.type === 'error' ? '#ffebee' : '#e8f5e9' }
+    },
+      notif.message,
+      createElement('button', {
+        onclick: () => removeNotification(notif.id)
+      }, '✕')
     )
-  );
-});
+  )
+);
 
 // Use the data attribute in the key function
 const notificationList = createElement('div', {

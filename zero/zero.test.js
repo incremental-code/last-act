@@ -309,6 +309,38 @@ test('Array children: handles empty array', () => {
   assertEquals(div.textContent, 'A');
 });
 
+test('Array children: computed() returning element array works with keyed reconciler', () => {
+  const items = new Signal([
+    { id: 1, name: 'A' },
+    { id: 2, name: 'B' },
+  ]);
+
+  const elements = computed(() =>
+    items.get().map(item =>
+      createElement('div', { attributes: { 'data-id': String(item.id) } }, item.name)
+    )
+  );
+
+  const list = createElement('section', {
+    key: (el) => el.getAttribute('data-id')
+  }, elements);
+
+  assertEquals(list.children.length, 2);
+  assertEquals(list.children[0].getAttribute('data-id'), '1');
+  assertEquals(list.children[1].getAttribute('data-id'), '2');
+
+  // Add item
+  items.set([...items.get(), { id: 3, name: 'C' }]);
+  assertEquals(list.children.length, 3);
+  assertEquals(list.children[2].getAttribute('data-id'), '3');
+
+  // Remove middle item
+  items.set(items.get().filter(i => i.id !== 2));
+  assertEquals(list.children.length, 2);
+  assertEquals(list.children[0].getAttribute('data-id'), '1');
+  assertEquals(list.children[1].getAttribute('data-id'), '3');
+});
+
 test('Array children: handles clearing array', () => {
   const items = new Signal(['A', 'B']);
 
