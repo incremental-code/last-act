@@ -14,5 +14,8 @@
   "devDependencies": {
     "esbuild": "^0.28.0",
     "jsdom": "^24.0.0"
+  },
+  "dependencies": {
+    "signal-polyfill": "^0.2.2"
   }
 }
