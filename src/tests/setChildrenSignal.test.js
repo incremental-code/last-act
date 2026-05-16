@@ -113,6 +113,22 @@ describe('setChildrenSignal', () => {
             assert.equal(el.children[0], a);
             assert.equal(el.children[1], b);
         });
+
+        test('flattens a signal that resolves to an array of nodes', async () => {
+            const el = dom.window.document.createElement('div');
+            const a = dom.window.document.createElement('span');
+            const b = dom.window.document.createElement('p');
+            const c = dom.window.document.createElement('article');
+            a.dataset.key = 'a';
+            b.dataset.key = 'b';
+            c.dataset.key = 'c';
+            const list = new Signal.State([a, b]);
+            setChildrenSignal(el, [list]);
+            assert.deepEqual([...el.children].map(node => node.dataset.key), ['a', 'b']);
+            list.set([c, a]);
+            await tick();
+            assert.deepEqual([...el.children].map(node => node.dataset.key), ['c', 'a']);
+        });
     });
 
     describe('reconciliation — reordering', () => {

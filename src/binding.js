@@ -97,12 +97,8 @@ export function setChildren(element, children) {
                 setChildrenSignal(element, children);
                 return;
             }
-            for (const child of children) {
-                if (child instanceof Node) {
-                    element.appendChild(child);
-                } else {
-                    element.appendChild(document.createTextNode(String(child)));
-                }
+            for (const child of normalizeChildren(children)) {
+                element.appendChild(child);
             }
         } else if (children instanceof Node) {
             element.appendChild(children);
@@ -124,14 +120,27 @@ export function setChildrenSignal(element, signal) {
     const stop = effect(() => {
         // If signal is a raw array of (possible) signals, resolve each entry directly
         // inside the effect so sub-signals are tracked as direct dependencies.
-        const value = isArray
-            ? signal.map(c => (Signal.isState(c) || Signal.isComputed(c)) ? c.get() : c)
-            : signal.get();
+        const value = isArray ? resolveChildrenArray(signal) : signal.get();
 
         // Short-cut if new value is a single node.
         if (value instanceof Node) {
             element.textContent = '';
             element.replaceChildren(value);
+            return;
+        }
+
+        if (!Array.isArray(value)) {
+            element.replaceChildren(...normalizeChildren([value]));
+            return;
+        }
+
+        const normalizedChildren = normalizeChildren(value);
+        const canReconcileByKey = normalizedChildren.every(child => (
+            child instanceof HTMLElement && child.dataset.key
+        ));
+
+        if (!canReconcileByKey) {
+            element.replaceChildren(...normalizedChildren);
             return;
         }
 
@@ -147,7 +156,7 @@ export function setChildrenSignal(element, signal) {
         
         // Then remove any chilren that aren't in the new value or have a different key.
         const existingKeysToRemove = existingKeys.filter(key => {
-            return !value.find(child => child instanceof HTMLElement && child.dataset.key === key);
+            return !normalizedChildren.find(child => child.dataset.key === key);
         });
 
         // Remove the children that aren't in the new value or have a different key.
@@ -163,7 +172,7 @@ export function setChildrenSignal(element, signal) {
         // insertBefore places the child there (insertBefore with null appends).
         // If the key matches but the element reference changed (e.g. a sub-signal produced
         // a new node), replaceChild swaps it in-place.
-        for (const [index, child] of value.entries()) {
+        for (const [index, child] of normalizedChildren.entries()) {
             const current = element.children[index];
             if (current === child) {
                 continue;
@@ -177,4 +186,27 @@ export function setChildrenSignal(element, signal) {
     });
 
     onUnmount(element, stop);
+}
+
+function resolveChildrenArray(children) {
+    return children.flatMap(child => {
+        const value = (Signal.isState(child) || Signal.isComputed(child))
+            ? child.get()
+            : child;
+        return normalizeChildren([value]);
+    });
+}
+
+function normalizeChildren(children) {
+    return children.flatMap(child => {
+        if (Array.isArray(child)) {
+            return normalizeChildren(child);
+        }
+
+        if (child instanceof Node) {
+            return [child];
+        }
+
+        return [document.createTextNode(String(child))];
+    });
 }
