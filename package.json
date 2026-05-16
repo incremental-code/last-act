@@ -26,6 +26,7 @@
     "serve": "^14.2.1"
   },
   "dependencies": {
+    "signal-polyfill": "^0.2.2",
     "terser": "^5.47.1"
   }
 }
