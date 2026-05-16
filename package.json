@@ -1,11 +1,16 @@
 {
-  "name": "last-act",
+  "private": false,
+  "name": "@incremental-code/last-act",
   "version": "1.0.0",
   "description": "A minimal signal based web component library.",
   "main": "src/index.js",
+  "types": "index.d.ts",
   "type": "module",
   "exports": {
-    ".": "./src/index.js"
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./src/index.js"
+    }
   },
   "scripts": {
     "start": "serve . -p 3000",
