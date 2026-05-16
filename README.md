@@ -10,6 +10,7 @@ const vnode = createElement(type, props, ...children)
 const element = mount(vnode, parent?)
 const hydrated = hydrate(vnode, existingElement)
 const mounted = getMountedNode(vnode)
+const html = serialize(vnode)
 const stopFn = effect(fn)
 onUnmount(vnodeOrElement, fn)
 ```

@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom';
 import { Signal } from 'signal-polyfill';
 import { createElement, hydrate, getMountedNode } from '../element.js';
 import { onUnmount } from '../lifecycle.js';
+import { serialize } from '../serialize.js';
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
 let origWindow, origDocument;
@@ -108,5 +109,31 @@ describe('hydrate', () => {
         assert.equal(existing.childNodes.length, 3);
         assert.equal(existing.childNodes[1].id, 'middle');
         assert.equal(existing.childNodes[1].textContent, 'middle');
+    });
+
+    test('serializes and hydrates array-of-signals children with conditional nulls', async () => {
+        const showA = new Signal.State(true);
+        const showB = new Signal.State(false);
+        const a = new Signal.Computed(() => showA.get() ? createElement('li', { key: 'a' }, 'A') : null);
+        const b = new Signal.Computed(() => showB.get() ? createElement('li', { key: 'b' }, 'B') : null);
+        const tree = createElement('ul', { attributes: { id: 'list' }, children: [a, b] });
+
+        const html = serialize(tree);
+        dom.window.document.body.innerHTML = html;
+        const existing = dom.window.document.getElementById('list');
+
+        const hydrated = hydrate(tree, existing);
+        await tick();
+
+        assert.equal(hydrated, existing);
+        assert.equal(existing.outerHTML, '<ul id="list"><li data-key="a">A</li>null</ul>');
+
+        showB.set(true);
+        await tick();
+        assert.equal(existing.outerHTML, '<ul id="list"><li data-key="a">A</li>null<li data-key="b">B</li></ul>');
+
+        showA.set(false);
+        await tick();
+        assert.equal(existing.outerHTML, '<ul id="list">null<li data-key="b">B</li></ul>');
     });
 });

@@ -43,6 +43,7 @@ export function createElement(
 export function mount(renderable: Renderable, parent?: Node): Node;
 export function hydrate(renderable: Renderable, existingNode: Node): Node;
 export function getMountedNode(renderable: Renderable): Node | undefined;
+export function serialize(renderable: Renderable): string;
 
 export function effect(callback: () => void | (() => void)): () => void;
 export function onUnmount(element: VirtualNode | Node, callback: () => void): void;
