@@ -41,6 +41,7 @@ export function createElement(
 ): Renderable;
 
 export function mount(renderable: Renderable, parent?: Node): Node;
+export function hydrate(renderable: Renderable, existingNode: Node): Node;
 export function getMountedNode(renderable: Renderable): Node | undefined;
 
 export function effect(callback: () => void | (() => void)): () => void;

@@ -8,6 +8,8 @@ in under 260 lines, 1.3KB gzipped.
 ```
 const vnode = createElement(type, props, ...children)
 const element = mount(vnode, parent?)
+const hydrated = hydrate(vnode, existingElement)
+const mounted = getMountedNode(vnode)
 const stopFn = effect(fn)
 onUnmount(vnodeOrElement, fn)
 ```
