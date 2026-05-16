@@ -11,6 +11,9 @@ const originalDocument = global.document;
 before(() => {
     global.window = dom.window;
     global.document = dom.window.document;
+    global.Node = dom.window.Node;
+    global.HTMLElement = dom.window.HTMLElement;
+    global.MutationObserver = dom.window.MutationObserver;
 });
 
 after(() => {
@@ -306,8 +309,9 @@ describe('createElement', () => {
                 id: 'my-id'
             });
             
-            // Only attributes in the attributes object should be set via setAttribute
-            assert.equal(element.getAttribute('id'), null);
+            // id is a DOM-reflected property: setting element.id also sets the attribute.
+            // Only non-reflected custom props are invisible to getAttribute.
+            assert.equal(element.id, 'my-id');
         });
     });
 

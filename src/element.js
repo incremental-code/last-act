@@ -22,20 +22,27 @@ import { setAttributes, setSignalAttribute, setProperties, setChildren, setKey }
  * @returns HTMLElement
  */
 export function createElement(type, props = {}, ...children) {
-    let element;
-    let { key, attributes, ...restOfProps } = props;
-    
+    if (typeof type !== 'string' && typeof type !== 'function') {
+        throw new TypeError(`createElement: invalid type "${type}"`);
+    }
+
+    let { key, attributes, children: propsChildren, ...restOfProps } = props;
+    const propsChildrenArray = propsChildren != null
+        ? (Array.isArray(propsChildren) ? propsChildren : [propsChildren])
+        : [];
+    const allChildren = [...propsChildrenArray, ...children];
+
     if (typeof type === 'string') {
-        element = document.createElement(type);
+        const element = document.createElement(type);
         setKey(element, key);
         setAttributes(element, attributes);
         setProperties(element, restOfProps);
-        setChildren(element, children);
+        setChildren(element, allChildren);
         return element;
     }
 
     if (typeof type === 'function') {
-        element = type({ key, attributes, children, ...restOfProps });
+        const element = type({ key, attributes, children: allChildren, ...restOfProps });
         setKey(element, key);
         return element;
     }
