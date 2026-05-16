@@ -1,5 +1,7 @@
 # Last.act
 
+[![Coverage](https://codecov.io/gh/incremental-code/last-act/branch/main/graph/badge.svg)](https://codecov.io/gh/incremental-code/last-act)
+
 A tiny, deliberately-readable reimplementation of React's core ideas — no build
 step, plain ES modules. Part of the **last-js** collection. The goal is pedagogical: if you read [`last.act.js`](last.act.js)
 end to end you've seen the spine of React (components, `useState`, `useEffect`,
