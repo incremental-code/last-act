@@ -1,4 +1,4 @@
-import { effect } from "./effect";
+import { effect } from "./effect.js";
 import { Signal } from "signal-polyfill";
 import { onUnmount } from "./lifecycle.js";
 
@@ -19,7 +19,7 @@ import { onUnmount } from "./lifecycle.js";
 export function setAttributes(element, attributes) {
     if (attributes && typeof attributes === 'object') {
         for (const [key, value] of Object.entries(attributes)) {
-            if (value instanceof Signal) {
+            if (Signal.isState(value) || Signal.isComputed(value)) {
                 setSignalAttribute(element, key, value);
                 continue;
             }
@@ -45,7 +45,7 @@ export function setAttributes(element, attributes) {
  * @param {*Signal} signal 
  */
 export function setSignalAttribute(element, key, signal) {
-    if (!signal instanceof Signal) {
+    if (!(Signal.isState(signal) || Signal.isComputed(signal))) {
         return console.warn(`setSignalAttribute: value for ${key} is not a Signal`, signal);
     }
 
@@ -92,10 +92,16 @@ export function setProperties(element, props) {
 export function setChildren(element, children) {
     if (children) {
         if (Array.isArray(children)) {
-        
+            for (const child of children) {
+                if (child instanceof Node) {
+                    element.appendChild(child);
+                } else {
+                    element.appendChild(document.createTextNode(String(child)));
+                }
+            }
         } else if (children instanceof Node) {
             element.appendChild(children);
-        } else if (children instanceof Signal) {
+        } else if (Signal.isState(children) || Signal.isComputed(children)) {
             setChildrenSignal(element, children);
         } else {
             element.textContent = String(children);
@@ -104,7 +110,7 @@ export function setChildren(element, children) {
 }
 
 export function setChildrenSignal(element, signal) {
-    if (!signal instanceof Signal) {
+    if (!(Signal.isState(signal) || Signal.isComputed(signal))) {
         return console.warn(`setChildrenSignal: value is not a Signal`, signal);
     }
 
