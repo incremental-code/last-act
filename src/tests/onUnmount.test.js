@@ -2,6 +2,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { onUnmount } from '../lifecycle.js';
+import { createElement, mount } from '../element.js';
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
 let origWindow, origDocument;
@@ -64,5 +65,17 @@ describe('onUnmount', () => {
         await tick();
         assert.equal(called, false);
         dom.window.document.body.removeChild(container);
+    });
+
+    test('supports registering on a virtual node before mount', async () => {
+        const vnode = createElement('div');
+        let called = false;
+        onUnmount(vnode, () => { called = true; });
+
+        const el = mount(vnode, dom.window.document.body);
+        dom.window.document.body.removeChild(el);
+        await tick();
+
+        assert.equal(called, true);
     });
 });

@@ -6,9 +6,10 @@ in under 260 lines, 1.3KB gzipped.
 # API
 
 ```
-const element = createElement(type, props, ...children)
+const vnode = createElement(type, props, ...children)
+const element = mount(vnode, parent?)
 const stopFn = effect(fn)
-onUnmount(element, fn)
+onUnmount(vnodeOrElement, fn)
 ```
 
 # Example

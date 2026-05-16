@@ -1,10 +1,10 @@
-import { Signal } from 'signal-polyfill';
-import { onUnmount } from './lifecycle.js';
-import { setAttributes, setSignalAttribute, setProperties, setChildren, setKey } from './binding.js';
+import { moveOnUnmount } from './lifecycle.js';
+import { setAttributes, setProperties, setChildren, setKey, setChildResolver } from './binding.js';
+import { createVirtualNode, isVirtualNode, MOUNTED_NODE } from './vnode.js';
 
 /**
- * createElement can be called to construct a native HTMLElement,
- * or to execute a function component.
+ * createElement creates a virtual node for native tags,
+ * or executes a function component that returns a renderable value.
  * 
  * ```
  * const HelloWorld = ({ name }) => {
@@ -19,7 +19,7 @@ import { setAttributes, setSignalAttribute, setProperties, setChildren, setKey }
  * @param {string|function} type 
  * @param {*} props 
  * @param  {...HTMLElement} children 
- * @returns HTMLElement
+ * @returns {object|Node}
  */
 export function createElement(type, props = {}, ...children) {
     if (typeof type !== 'string' && typeof type !== 'function') {
@@ -34,17 +34,70 @@ export function createElement(type, props = {}, ...children) {
     const allChildren = [...propsChildrenArray, ...children];
 
     if (typeof type === 'string') {
-        const element = document.createElement(type);
-        setKey(element, key);
-        setAttributes(element, attributes);
-        setProperties(element, restOfProps);
-        setChildren(element, allChildren);
+        return createVirtualNode(type, {
+            key,
+            attributes,
+            props: restOfProps,
+            children: allChildren,
+        });
+    }
+
+    const rendered = type({ key, attributes, children: allChildren, ...restOfProps });
+    if (key === undefined) return rendered;
+
+    if (isVirtualNode(rendered)) {
+        rendered.key = key;
+        return rendered;
+    }
+
+    if (rendered instanceof Node) {
+        setKey(rendered, key);
+    }
+
+    return rendered;
+}
+
+export function mount(renderable, parent) {
+    const node = materialize(renderable);
+    if (parent) {
+        parent.appendChild(node);
+    }
+    return node;
+}
+
+export function getMountedNode(renderable) {
+    if (renderable instanceof Node) {
+        return renderable;
+    }
+
+    if (isVirtualNode(renderable)) {
+        return renderable[MOUNTED_NODE];
+    }
+
+    return undefined;
+}
+
+function materialize(renderable) {
+    if (renderable instanceof Node) {
+        return renderable;
+    }
+
+    if (isVirtualNode(renderable)) {
+        if (renderable[MOUNTED_NODE]) {
+            return renderable[MOUNTED_NODE];
+        }
+
+        const element = document.createElement(renderable.type);
+        setKey(element, renderable.key);
+        setAttributes(element, renderable.attributes);
+        setProperties(element, renderable.props);
+        setChildren(element, renderable.children);
+        renderable[MOUNTED_NODE] = element;
+        moveOnUnmount(renderable, element);
         return element;
     }
 
-    if (typeof type === 'function') {
-        const element = type({ key, attributes, children: allChildren, ...restOfProps });
-        setKey(element, key);
-        return element;
-    }
+    return document.createTextNode(String(renderable));
 }
+
+setChildResolver(materialize);

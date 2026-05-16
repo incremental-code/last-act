@@ -1,6 +1,13 @@
 import { effect } from "./effect.js";
 import { Signal } from "signal-polyfill";
 import { onUnmount } from "./lifecycle.js";
+import { isVirtualNode } from "./vnode.js";
+
+let childResolver = (child) => child;
+
+export function setChildResolver(resolver) {
+    childResolver = resolver;
+}
 
 /**
  * setKey() sets a key on the elemen that identifies it in it's siblings,
@@ -102,6 +109,8 @@ export function setChildren(element, children) {
             }
         } else if (children instanceof Node) {
             element.appendChild(children);
+        } else if (isVirtualNode(children)) {
+            element.appendChild(childResolver(children));
         } else if (Signal.isState(children) || Signal.isComputed(children)) {
             setChildrenSignal(element, children);
         } else {
@@ -205,6 +214,10 @@ function normalizeChildren(children) {
 
         if (child instanceof Node) {
             return [child];
+        }
+
+        if (isVirtualNode(child)) {
+            return [childResolver(child)];
         }
 
         return [document.createTextNode(String(child))];

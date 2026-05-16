@@ -1,7 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { createElement } from '../element.js';
+import { createElement, mount, getMountedNode } from '../element.js';
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
 const originalWindow = global.window;
@@ -22,10 +22,11 @@ after(() => {
 
 describe('createElement', () => {
     describe('native element', () => {
-        test('creates an element with the given tag', () => {
-            const el = createElement('div');
-            assert.equal(el.tagName, 'DIV');
-            assert(el instanceof dom.window.HTMLElement);
+        test('creates a virtual node with the given tag', () => {
+            const node = createElement('div');
+            assert.equal(node.type, 'div');
+            assert.equal(typeof node, 'object');
+            assert.equal(node instanceof dom.window.HTMLElement, false);
         });
 
         test('throws for an invalid type', () => {
@@ -33,55 +34,67 @@ describe('createElement', () => {
             assert.throws(() => createElement(null), TypeError);
         });
 
-        test('passes attributes to the element', () => {
-            const el = createElement('div', { attributes: { id: 'main', class: 'box' } });
+        test('passes attributes to the mounted element', () => {
+            const el = mount(createElement('div', { attributes: { id: 'main', class: 'box' } }));
             assert.equal(el.getAttribute('id'), 'main');
             assert.equal(el.getAttribute('class'), 'box');
         });
 
-        test('accepts null props for native elements', () => {
-            const el = createElement('div', null, 'hello');
+        test('accepts null props for native elements when mounted', () => {
+            const el = mount(createElement('div', null, 'hello'));
             assert.equal(el.tagName, 'DIV');
             assert.equal(el.textContent, 'hello');
         });
 
-        test('passes non-reserved props as properties', () => {
-            const el = createElement('input', { value: 'hello' });
+        test('passes non-reserved props as properties on mount', () => {
+            const el = mount(createElement('input', { value: 'hello' }));
             assert.equal(el.value, 'hello');
         });
 
-        test('sets key as data-key', () => {
-            const el = createElement('div', { key: 'k1' });
+        test('sets key as data-key on mount', () => {
+            const el = mount(createElement('div', { key: 'k1' }));
             assert.equal(el.dataset.key, 'k1');
         });
 
         test('key, attributes, and children do not leak into setProperties', () => {
             // If any of these leaked, setting element.children would throw
             assert.doesNotThrow(() => {
-                createElement('div', {
+                mount(createElement('div', {
                     key: 'k',
                     attributes: { class: 'x' },
                     children: ['a', 'b'],
-                }, 'c');
+                }, 'c'));
             });
         });
 
-        test('appends rest-param children as text nodes', () => {
-            const el = createElement('div', {}, 'hello', 'world');
+        test('appends rest-param children as text nodes on mount', () => {
+            const el = mount(createElement('div', {}, 'hello', 'world'));
             assert.equal(el.childNodes[0].textContent, 'hello');
             assert.equal(el.childNodes[1].textContent, 'world');
         });
 
-        test('appends props.children as text nodes', () => {
-            const el = createElement('div', { children: ['hello', 'world'] });
+        test('appends props.children as text nodes on mount', () => {
+            const el = mount(createElement('div', { children: ['hello', 'world'] }));
             assert.equal(el.childNodes[0].textContent, 'hello');
             assert.equal(el.childNodes[1].textContent, 'world');
         });
 
-        test('merges props.children and rest-param children in order', () => {
-            const el = createElement('div', { children: ['first'] }, 'second');
+        test('merges props.children and rest-param children in order on mount', () => {
+            const el = mount(createElement('div', { children: ['first'] }, 'second'));
             assert.equal(el.childNodes[0].textContent, 'first');
             assert.equal(el.childNodes[1].textContent, 'second');
+        });
+
+        test('getMountedNode returns undefined before mount and node after mount', () => {
+            const vnode = createElement('div');
+            assert.equal(getMountedNode(vnode), undefined);
+            const mounted = mount(vnode);
+            assert.equal(getMountedNode(vnode), mounted);
+        });
+
+        test('getMountedNode returns a native node as-is', () => {
+            const el = dom.window.document.createElement('div');
+            assert.equal(getMountedNode(el), el);
         });
     });
 
@@ -102,13 +115,11 @@ describe('createElement', () => {
             assert.deepEqual(received.children, ['a', 'b']);
         });
 
-        test('returns the element produced by the component', () => {
+        test('returns the renderable produced by the component', () => {
             const Comp = () => {
-                const el = dom.window.document.createElement('span');
-                el.textContent = 'hi';
-                return el;
+                return createElement('span', null, 'hi');
             };
-            const el = createElement(Comp);
+            const el = mount(createElement(Comp));
             assert.equal(el.tagName, 'SPAN');
             assert.equal(el.textContent, 'hi');
         });
@@ -122,20 +133,18 @@ describe('createElement', () => {
             assert.deepEqual(received.children, ['child']);
         });
 
-        test('sets key on the element returned by the component', () => {
-            const Comp = () => dom.window.document.createElement('div');
-            const el = createElement(Comp, { key: 'comp-key' });
+        test('sets key on the mounted element returned by the component', () => {
+            const Comp = () => createElement('div');
+            const el = mount(createElement(Comp, { key: 'comp-key' }));
             assert.equal(el.dataset.key, 'comp-key');
         });
 
         test('supports nested components', () => {
-            const Inner = () => dom.window.document.createElement('span');
+            const Inner = () => createElement('span');
             const Outer = () => {
-                const div = dom.window.document.createElement('div');
-                div.appendChild(createElement(Inner));
-                return div;
+                return createElement('div', null, createElement(Inner));
             };
-            const el = createElement(Outer);
+            const el = mount(createElement(Outer));
             assert.equal(el.tagName, 'DIV');
             assert.equal(el.children[0].tagName, 'SPAN');
         });
@@ -145,7 +154,7 @@ describe('createElement', () => {
         test('component builds an element using createElement internally', () => {
             const Greeting = ({ name }) =>
                 createElement('p', { attributes: { class: 'greeting' } }, `Hello, ${name}!`);
-            const el = createElement(Greeting, { name: 'Alice' });
+            const el = mount(createElement(Greeting, { name: 'Alice' }));
             assert.equal(el.tagName, 'P');
             assert.equal(el.getAttribute('class'), 'greeting');
             assert.equal(el.textContent, 'Hello, Alice!');

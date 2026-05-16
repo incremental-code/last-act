@@ -1,11 +1,23 @@
+import { isVirtualNode, MOUNTED_NODE } from './vnode.js';
+
 /**
  * onUnmount() registers a callback to be called when the element is unmounted from the DOM.
- * @param {HTMLElement} element - The element to watch for unmounting
+ * @param {HTMLElement|object} element - The element or virtual node to watch for unmounting
  * @param {Function} callback - The callback to call when the element is unmounted
  */
 export function onUnmount(element, callback) {
+    if (isVirtualNode(element)) {
+        const mountedNode = element[MOUNTED_NODE];
+        if (mountedNode) {
+            onUnmount(mountedNode, callback);
+            return;
+        }
+    }
+
     (element[UNMOUNTS] ??= []).push(callback);
-    observeUnmounts();
+    if (element instanceof Node) {
+        observeUnmounts();
+    }
 }
 
 export function runOnumount(element) {
@@ -16,6 +28,17 @@ export function runOnumount(element) {
     }
     delete element[UNMOUNTS];
   }
+}
+
+export function moveOnUnmount(from, to) {
+  const callbacks = from[UNMOUNTS];
+  if (!callbacks || callbacks.length === 0) return;
+
+  for (const cb of callbacks) {
+    onUnmount(to, cb);
+  }
+
+  delete from[UNMOUNTS];
 }
 
 const UNMOUNTS = Symbol('last-act/unmount');

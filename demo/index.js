@@ -1,9 +1,9 @@
-import { createElement, effect, onUnmount } from '../src/index.js';
+import { createElement, mount } from '../src/index.js';
 import { Signal } from 'signal-polyfill';
 
 window.addEventListener('DOMContentLoaded', () => {
     const app = createElement(App);
-    document.body.appendChild(app);
+    mount(app, document.body);
 });
 
 function App() {
@@ -43,14 +43,9 @@ function App() {
 }
 
 function WorldWeather({ rows, removeCity }) {
-    const tbody = createElement("tbody");
-    const stop = effect(() => {
-        const rowEls = rows.get().map(entry =>
-            createElement(CityWeather, { entry, removeCity })
-        );
-        tbody.replaceChildren(...rowEls);
-    });
-    onUnmount(tbody, stop);
+    const rowEls = new Signal.Computed(() =>
+        rows.get().map(entry => createElement(CityWeather, { entry, removeCity }))
+    );
 
     return createElement("table", undefined,
         createElement("thead", undefined,
@@ -61,22 +56,17 @@ function WorldWeather({ rows, removeCity }) {
                 createElement("th", undefined, ""),
             )
         ),
-        tbody
+        createElement("tbody", undefined, rowEls)
     );
 }
 
 function CityWeather({ entry, removeCity }) {
-    const tempTd = createElement("td");
-    const descTd = createElement("td");
-    const row = createElement("tr", undefined,
+    return createElement("tr", undefined,
         createElement("td", undefined, entry.city),
-        tempTd,
-        descTd,
+        createElement("td", undefined, entry.temp),
+        createElement("td", undefined, entry.desc),
         createElement("td", undefined,
             createElement("button", { onclick: () => removeCity(entry.city) }, "✕")
         ),
     );
-    onUnmount(row, effect(() => { tempTd.textContent = entry.temp.get(); }));
-    onUnmount(row, effect(() => { descTd.textContent = entry.desc.get(); }));
-    return row;
 }
