@@ -26,7 +26,8 @@ export function createElement(type, props = {}, ...children) {
         throw new TypeError(`createElement: invalid type "${type}"`);
     }
 
-    let { key, attributes, children: propsChildren, ...restOfProps } = props;
+    const normalizedProps = props ?? {};
+    let { key, attributes, children: propsChildren, ...restOfProps } = normalizedProps;
     const propsChildrenArray = propsChildren != null
         ? (Array.isArray(propsChildren) ? propsChildren : [propsChildren])
         : [];

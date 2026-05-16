@@ -39,6 +39,12 @@ describe('createElement', () => {
             assert.equal(el.getAttribute('class'), 'box');
         });
 
+        test('accepts null props for native elements', () => {
+            const el = createElement('div', null, 'hello');
+            assert.equal(el.tagName, 'DIV');
+            assert.equal(el.textContent, 'hello');
+        });
+
         test('passes non-reserved props as properties', () => {
             const el = createElement('input', { value: 'hello' });
             assert.equal(el.value, 'hello');
@@ -105,6 +111,15 @@ describe('createElement', () => {
             const el = createElement(Comp);
             assert.equal(el.tagName, 'SPAN');
             assert.equal(el.textContent, 'hi');
+        });
+
+        test('passes empty props when a component is called with null props', () => {
+            let received;
+            const Comp = (props) => { received = props; return dom.window.document.createElement('div'); };
+            createElement(Comp, null, 'child');
+            assert.equal(received.key, undefined);
+            assert.equal(received.attributes, undefined);
+            assert.deepEqual(received.children, ['child']);
         });
 
         test('sets key on the element returned by the component', () => {
