@@ -99,12 +99,17 @@ export function setProperties(element, props) {
 export function setChildren(element, children) {
     if (children) {
         if (Array.isArray(children)) {
-            const hasSignals = children.some(c => Signal.isState(c) || Signal.isComputed(c));
+            // Components that pass `children` through createElement double-wrap it
+            // (e.g. createElement('span', props, children) where children is already
+            // an array). Flatten so signals nested inside aren't missed by the
+            // shallow hasSignals check below.
+            const flat = children.flat(Infinity);
+            const hasSignals = flat.some(c => Signal.isState(c) || Signal.isComputed(c));
             if (hasSignals) {
-                setChildrenSignal(element, children);
+                setChildrenSignal(element, flat);
                 return;
             }
-            for (const child of normalizeChildren(children)) {
+            for (const child of normalizeChildren(flat)) {
                 element.appendChild(child);
             }
         } else if (children instanceof Node) {
