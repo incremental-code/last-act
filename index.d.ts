@@ -79,6 +79,19 @@ export function signal<T>(value: T): WriteSignal<T>;
 /** Shorthand for `new Signal.Computed(fn)`. */
 export function computed<T>(fn: () => T): ReadSignal<T>;
 
+/**
+ * Tagged-template alternative to JSX. Pure-whitespace text segments are
+ * dropped so template indentation never becomes a text node.
+ *
+ *   html`<div id="x"><h1>Hello ${name}</h1></div>`
+ *
+ * Supports interpolated tag names (`<${Component}>`), spread props
+ * (`<div ${propsObj}>`), event handlers (`onclick=${fn}` → props),
+ * and any value as a child. Returns a single Renderable when there is
+ * exactly one top-level node, otherwise an array.
+ */
+export function html(strings: TemplateStringsArray, ...values: unknown[]): Renderable | Renderable[];
+
 declare global {
   namespace JSX {
     type Element = Renderable;
