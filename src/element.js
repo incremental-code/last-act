@@ -180,10 +180,12 @@ function hydrateStaticChildren(parent, children) {
 
 function flattenChildren(children) {
     if (!Array.isArray(children)) {
+        if (isBlank(children)) return [];
         return [flattenSingleChild(children)];
     }
 
     return children.flatMap(child => {
+        if (isBlank(child)) return [];
         if (Array.isArray(child)) {
             return flattenChildren(child);
         }
@@ -196,6 +198,10 @@ function flattenSingleChild(child) {
         return child;
     }
     return String(child);
+}
+
+function isBlank(child) {
+    return child === null || child === undefined || child === false || child === true;
 }
 
 setChildResolver((child) => materialize(child));
