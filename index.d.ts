@@ -32,7 +32,15 @@ export type VirtualNode = {
   children?: Child[];
 };
 
-export type Renderable = VirtualNode | Node | string | number | boolean | null | undefined;
+export type Renderable =
+  | VirtualNode
+  | Node
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | { get(): unknown };
 
 export function createElement(
   type: string | Component,
@@ -47,6 +55,15 @@ export function serialize(renderable: Renderable): string;
 
 export function effect(callback: () => void | (() => void)): () => void;
 export function onUnmount(element: VirtualNode | Node, callback: () => void): void;
+
+export interface ReadSignal<T> { get(): T; }
+export interface WriteSignal<T> extends ReadSignal<T> { set(value: T): void; }
+
+/** Shorthand for `new Signal.State(value)`. */
+export function signal<T>(value: T): WriteSignal<T>;
+
+/** Shorthand for `new Signal.Computed(fn)`. */
+export function computed<T>(fn: () => T): ReadSignal<T>;
 
 declare global {
   namespace JSX {
