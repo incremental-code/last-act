@@ -1,21 +1,18 @@
-import { createElement, mount } from '../src/index.js';
-import { Signal } from 'signal-polyfill';
+import { html, mount, signal, computed } from '../src/index.js';
 
 window.addEventListener('DOMContentLoaded', () => {
-    const app = createElement(App);
-    mount(app, document.body);
+    mount(html`<${App}/>`, document.body);
 });
 
 function App() {
-    const city = new Signal.State("Cape Town");
-    const rows = new Signal.State([]);
+    const city = signal("Cape Town");
+    const rows = signal([]);
 
     const addCity = () => {
         const name = city.get().trim();
         if (!name) return;
 
-        // Add a loading row immediately
-        const entry = { city: name, temp: new Signal.State("…"), desc: new Signal.State("loading") };
+        const entry = { city: name, temp: signal("…"), desc: signal("loading") };
         rows.set([...rows.get(), entry]);
 
         fetch(`https://wttr.in/${encodeURIComponent(name)}?format=j1`)
@@ -31,42 +28,48 @@ function App() {
             });
     };
 
-    return createElement("div", undefined,
-        createElement("input", {
-            value: city.get(),
-            placeholder: "Enter a city",
-            oninput: e => city.set(e.target.value),
-        }),
-        createElement("button", { onclick: addCity }, "Add City"),
-        createElement(WorldWeather, { rows, removeCity: name => rows.set(rows.get().filter(r => r.city !== name)) })
-    );
+    const removeCity = (name) => rows.set(rows.get().filter(r => r.city !== name));
+
+    return html`
+        <div>
+            <input
+                value=${city.get()}
+                placeholder="Enter a city"
+                ${{ oninput: e => city.set(e.target.value) }}
+            />
+            <button ${{ onclick: addCity }}>Add City</button>
+            <${WorldWeather} ${{ rows, removeCity }}/>
+        </div>
+    `;
 }
 
 function WorldWeather({ rows, removeCity }) {
-    const rowEls = new Signal.Computed(() =>
-        rows.get().map(entry => createElement(CityWeather, { entry, removeCity }))
+    const rowEls = computed(() =>
+        rows.get().map(entry => html`<${CityWeather} ${{ entry, removeCity }}/>`)
     );
 
-    return createElement("table", undefined,
-        createElement("thead", undefined,
-            createElement("tr", undefined,
-                createElement("th", undefined, "City"),
-                createElement("th", undefined, "Temp"),
-                createElement("th", undefined, "Conditions"),
-                createElement("th", undefined, ""),
-            )
-        ),
-        createElement("tbody", undefined, rowEls)
-    );
+    return html`
+        <table>
+            <thead>
+                <tr>
+                    <th>City</th>
+                    <th>Temp</th>
+                    <th>Conditions</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>${rowEls}</tbody>
+        </table>
+    `;
 }
 
 function CityWeather({ entry, removeCity }) {
-    return createElement("tr", undefined,
-        createElement("td", undefined, entry.city),
-        createElement("td", undefined, entry.temp),
-        createElement("td", undefined, entry.desc),
-        createElement("td", undefined,
-            createElement("button", { onclick: () => removeCity(entry.city) }, "✕")
-        ),
-    );
+    return html`
+        <tr>
+            <td>${entry.city}</td>
+            <td>${entry.temp}</td>
+            <td>${entry.desc}</td>
+            <td><button ${{ onclick: () => removeCity(entry.city) }}>✕</button></td>
+        </tr>
+    `;
 }

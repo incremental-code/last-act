@@ -3,20 +3,22 @@ import { createElement } from "./element.js";
 /**
  * html`...` — a tagged-template alternative to JSX.
  *
- * Pure-whitespace text segments are dropped (so indentation never becomes a
- * spurious text node). Whitespace adjacent to non-whitespace is preserved.
+ * Pure-whitespace text segments are dropped (so template indentation never
+ * becomes a spurious text node). Whitespace adjacent to non-whitespace is
+ * preserved.
  *
  *   html`<div id="x"><h1>Hello ${name}</h1></div>`
  *
- * Supports:
- *   - <div>, </div>, <br/>
- *   - <${Component} ...>  — interpolated tag name (component or string)
- *   - id="x"   (literal attribute)        — routed to attributes.id
- *   - id=${v}  (interpolated attribute)   — routed to attributes.id
- *   - onclick=${fn}                       — routed to props.onclick (event handler)
- *   - ${{ key: 'k', attributes: {...} }}  — spread props between attrs
- *   - ${child} as a child position        — passed through as-is (VirtualNode,
- *                                           string, number, signal, array, …)
+ * Rules:
+ *   - `name="value"` or `name=${value}` always becomes `attributes.name`.
+ *     There is no event-handler or component magic — the form is the meaning.
+ *   - `${obj}` between attrs, or `props=${obj}`, spreads into props
+ *     (the second arg of createElement). This is how you pass anything
+ *     that isn't an HTML attribute — event handlers, keys, signals
+ *     bound as DOM properties, component props, etc.
+ *   - `<${Component}>` uses the interpolated value as the tag.
+ *   - `${value}` in a child position passes through as-is (VirtualNode,
+ *     string, number, signal, array, etc.).
  */
 
 const TEXT = 0;
@@ -30,24 +32,23 @@ const ATTR_UNQUOTED = 6;
 const isWS = (c) => c === " " || c === "\t" || c === "\n" || c === "\r";
 
 export function html(strings, ...values) {
-    // Stack of in-progress children arrays. Root holds top-level nodes.
     const root = [];
     const stack = [root];
     const pushChild = (c) => stack[stack.length - 1].push(c);
 
     let state = TEXT;
-    let buf = "";              // text accumulator for TEXT state
-    let tagName = null;        // string OR an interpolated value
+    let buf = "";
+    let tagName = null;
     let isClosing = false;
     let selfClosing = false;
-    let props = null;          // accumulated props for the current open tag
+    let attributes = null;     // bag for parsed name=value attrs
+    let props = null;          // bag for spread / props=${...} interpolations
     let attrName = "";
     let attrValue = "";
     let quote = "";
 
     const flushText = () => {
         if (buf.length === 0) return;
-        // Drop wholly-whitespace segments — template indentation never becomes a text node.
         let allWS = true;
         for (let k = 0; k < buf.length; k++) {
             if (!isWS(buf[k])) { allWS = false; break; }
@@ -56,30 +57,30 @@ export function html(strings, ...values) {
         buf = "";
     };
 
-    const setAttr = (name, value) => {
+    const addAttr = (name, value) => {
+        (attributes ??= {})[name] = value;
+    };
+
+    const mergeProps = (obj) => {
+        if (!obj || typeof obj !== "object") return;
         props ??= {};
-        if (name === "key") {
-            props.key = value;
-        } else if (name.startsWith("on") && typeof value === "function") {
-            props[name] = value;
-        } else {
-            (props.attributes ??= {})[name] = value;
-        }
+        for (const k in obj) props[k] = obj[k];
     };
 
     const resetTag = () => {
         tagName = null; isClosing = false; selfClosing = false;
-        props = null; attrName = ""; attrValue = ""; quote = "";
+        attributes = null; props = null;
+        attrName = ""; attrValue = ""; quote = "";
     };
 
     const finishTag = () => {
         if (isClosing) {
             stack.pop();
         } else if (selfClosing) {
-            pushChild({ __h: true, tag: tagName, props, children: [] });
+            pushChild({ __h: true, tag: tagName, attributes, props, children: [] });
         } else {
             const children = [];
-            pushChild({ __h: true, tag: tagName, props, children });
+            pushChild({ __h: true, tag: tagName, attributes, props, children });
             stack.push(children);
         }
         resetTag();
@@ -107,25 +108,25 @@ export function html(strings, ...values) {
                 break;
             case ATTR_NAME:
                 if (c === "=") state = ATTR_VAL;
-                else if (isWS(c)) { setAttr(attrName, true); attrName = ""; state = ATTR_OR_END; }
-                else if (c === ">") { setAttr(attrName, true); attrName = ""; finishTag(); }
-                else if (c === "/") { setAttr(attrName, true); attrName = ""; selfClosing = true; state = ATTR_OR_END; }
+                else if (isWS(c)) { addAttr(attrName, true); attrName = ""; state = ATTR_OR_END; }
+                else if (c === ">") { addAttr(attrName, true); attrName = ""; finishTag(); }
+                else if (c === "/") { addAttr(attrName, true); attrName = ""; selfClosing = true; state = ATTR_OR_END; }
                 else attrName += c;
                 break;
             case ATTR_VAL:
                 if (c === '"' || c === "'") { quote = c; attrValue = ""; state = ATTR_QUOTED; }
-                else if (isWS(c)) { setAttr(attrName, true); attrName = ""; state = ATTR_OR_END; }
-                else if (c === ">") { setAttr(attrName, true); attrName = ""; finishTag(); }
+                else if (isWS(c)) { addAttr(attrName, true); attrName = ""; state = ATTR_OR_END; }
+                else if (c === ">") { addAttr(attrName, true); attrName = ""; finishTag(); }
                 else { attrValue = c; state = ATTR_UNQUOTED; }
                 break;
             case ATTR_QUOTED:
-                if (c === quote) { setAttr(attrName, attrValue); attrName = ""; attrValue = ""; state = ATTR_OR_END; }
+                if (c === quote) { addAttr(attrName, attrValue); attrName = ""; attrValue = ""; state = ATTR_OR_END; }
                 else attrValue += c;
                 break;
             case ATTR_UNQUOTED:
-                if (isWS(c)) { setAttr(attrName, attrValue); attrName = ""; attrValue = ""; state = ATTR_OR_END; }
-                else if (c === ">") { setAttr(attrName, attrValue); attrName = ""; attrValue = ""; finishTag(); }
-                else if (c === "/") { setAttr(attrName, attrValue); attrName = ""; attrValue = ""; selfClosing = true; state = ATTR_OR_END; }
+                if (isWS(c)) { addAttr(attrName, attrValue); attrName = ""; attrValue = ""; state = ATTR_OR_END; }
+                else if (c === ">") { addAttr(attrName, attrValue); attrName = ""; attrValue = ""; finishTag(); }
+                else if (c === "/") { addAttr(attrName, attrValue); attrName = ""; attrValue = ""; selfClosing = true; state = ATTR_OR_END; }
                 else attrValue += c;
                 break;
         }
@@ -138,32 +139,26 @@ export function html(strings, ...values) {
                 pushChild(v);
                 break;
             case TAG_NAME:
-                // <${Component}> — interpolated tag name must be the entire name.
                 if (tagName !== "") {
                     throw new Error(`html: interpolated tag name must be the entire name (got literal "${tagName}" before \${...})`);
                 }
                 tagName = v;
                 break;
             case ATTR_OR_END:
-                // Spread props: <div ${{ key, attributes, onclick, ... }}>
-                if (v && typeof v === "object") {
-                    props ??= {};
-                    for (const k in v) {
-                        if (k === "attributes" && v[k] && typeof v[k] === "object") {
-                            props.attributes = Object.assign(props.attributes ?? {}, v[k]);
-                        } else {
-                            props[k] = v[k];
-                        }
-                    }
-                }
+                // Bare ${obj} — spread into props.
+                mergeProps(v);
                 break;
             case ATTR_VAL:
-                setAttr(attrName, v);
+                if (attrName === "props") {
+                    // props=${obj} — alternate spelling for spread.
+                    mergeProps(v);
+                } else {
+                    addAttr(attrName, v);
+                }
                 attrName = "";
                 state = ATTR_OR_END;
                 break;
             default:
-                // Interpolating inside a quoted attribute or mid-name is unsupported.
                 throw new Error("html: cannot interpolate inside a quoted attribute or attribute name");
         }
     };
@@ -182,7 +177,14 @@ export function html(strings, ...values) {
 function materialize(node) {
     if (Array.isArray(node)) return node.map(materialize);
     if (node && typeof node === "object" && node.__h) {
-        return createElement(node.tag, node.props, ...node.children.map(materialize));
+        // createElement's second arg is the props bag; we put the parsed
+        // attributes under its `attributes` key (createElement honors that),
+        // and merge any spread/props=${...} interpolations alongside.
+        const combined = node.props ? { ...node.props } : {};
+        if (node.attributes) combined.attributes = combined.attributes
+            ? { ...combined.attributes, ...node.attributes }
+            : node.attributes;
+        return createElement(node.tag, combined, ...node.children.map(materialize));
     }
     return node;
 }

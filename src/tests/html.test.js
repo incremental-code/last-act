@@ -19,22 +19,47 @@ describe('html', () => {
         assert.deepEqual(node.children, []);
     });
 
-    test('parses literal string attributes into the attributes bag', () => {
+    test('name="value" attrs land in attributes', () => {
         const node = html`<div id="main" class="box"></div>`;
         assert.equal(node.attributes.id, 'main');
         assert.equal(node.attributes.class, 'box');
     });
 
-    test('parses interpolated attribute values', () => {
-        const node = html`<div id=${'main'}></div>`;
+    test('name=${value} attrs land in attributes too', () => {
+        const node = html`<div id=${'main'} data-count=${42}></div>`;
         assert.equal(node.attributes.id, 'main');
+        assert.equal(node.attributes['data-count'], 42);
     });
 
-    test('routes on* function attrs to props (event handlers)', () => {
+    test('on* with name=${fn} also lands in attributes (no magic routing)', () => {
+        const fn = () => {};
+        const node = html`<button onclick=${fn}>Go</button>`;
+        assert.equal(node.attributes.onclick, fn);
+        // Not silently lifted into props.
+        assert.equal(node.props?.onclick, undefined);
+    });
+
+    test('event handlers go through spread', () => {
         const onclick = () => {};
-        const node = html`<button onclick=${onclick}>Go</button>`;
+        const node = html`<button ${{ onclick }}>Go</button>`;
         assert.equal(node.props.onclick, onclick);
-        assert.equal(node.attributes, undefined);
+        assert.equal(node.attributes?.onclick, undefined);
+    });
+
+    test('props=${obj} is an alternate spread spelling', () => {
+        const onclick = () => {};
+        const node = html`<button props=${{ onclick }}>Go</button>`;
+        assert.equal(node.props.onclick, onclick);
+        assert.equal(node.attributes?.props, undefined);
+    });
+
+    test('bare spread and attrs coexist', () => {
+        const onclick = () => {};
+        const node = html`<div id="a" ${{ onclick, key: 'k' }} class="b"></div>`;
+        assert.equal(node.attributes.id, 'a');
+        assert.equal(node.attributes.class, 'b');
+        assert.equal(node.props.onclick, onclick);
+        assert.equal(node.key, 'k');
     });
 
     test('parses nested children', () => {
@@ -66,7 +91,6 @@ describe('html', () => {
     test('mixes text and interpolated children', () => {
         const name = 'world';
         const node = html`<p>hello ${name}!</p>`;
-        // Three child entries: 'hello ', 'world', '!'
         assert.equal(node.children.length, 3);
         assert.equal(node.children[0], 'hello ');
         assert.equal(node.children[1], 'world');
@@ -82,7 +106,7 @@ describe('html', () => {
     test('interpolated child can be an array of VirtualNodes', () => {
         const items = ['a', 'b', 'c'];
         const node = html`<ul>${items.map(x => html`<li>${x}</li>`)}</ul>`;
-        const list = node.children[0];   // the array sits as one child entry
+        const list = node.children[0];
         assert.equal(Array.isArray(list), true);
         assert.equal(list.length, 3);
         assert.equal(list[0].type, 'li');
@@ -92,18 +116,27 @@ describe('html', () => {
     test('interpolated tag name (component)', () => {
         const MyBox = ({ children }) => createElement('section', null, ...children);
         const node = html`<${MyBox}><p>hi</p><//>`;
-        // createElement runs the component; result should be the section VirtualNode.
         assert.equal(node.type, 'section');
         assert.equal(node.children[0].type, 'p');
     });
 
-    test('spread props between attrs', () => {
-        const onclick = () => {};
-        const extra = { attributes: { 'data-x': '1' }, onclick };
-        const node = html`<div id="a" ${extra}></div>`;
-        assert.equal(node.attributes.id, 'a');
-        assert.equal(node.attributes['data-x'], '1');
-        assert.equal(node.props.onclick, onclick);
+    test('component props arrive only via spread or props=${...}', () => {
+        let captured = null;
+        const Comp = (p) => { captured = p; return createElement('div'); };
+        // name=${value} → attributes (so the component sees props.attributes.foo)
+        html`<${Comp} foo="bar"/>`;
+        assert.equal(captured.foo, undefined);
+        assert.equal(captured.attributes.foo, 'bar');
+
+        // To pass real props you spread:
+        const removeCity = () => {};
+        html`<${Comp} ${{ rows: [1, 2], removeCity }}/>`;
+        assert.deepEqual(captured.rows, [1, 2]);
+        assert.equal(captured.removeCity, removeCity);
+
+        // Or use props=${...}:
+        html`<${Comp} props=${{ count: 7 }}/>`;
+        assert.equal(captured.count, 7);
     });
 
     test('signal as child is passed through unchanged', () => {
@@ -142,7 +175,7 @@ describe('html', () => {
         `;
         assert.equal(node.type, 'div');
         assert.equal(node.attributes.class, 'page');
-        assert.equal(node.children.length, 2);                       // <header> + <main>
+        assert.equal(node.children.length, 2);
         assert.equal(node.children[0].type, 'header');
         assert.equal(node.children[0].children[0].type, 'h1');
         assert.equal(node.children[0].children[0].children[0], 'Hello');
