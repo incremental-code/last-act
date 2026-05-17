@@ -9,9 +9,23 @@ export type Child =
   | Child[]
   | { get(): unknown };
 
+/**
+ * A `ref` is a callback or `Signal.State` that receives the mounted DOM
+ * element. Pass it via `attributes.ref`. On unmount it is invalidated with
+ * `null`.
+ */
+export type Ref<T extends Element = HTMLElement> =
+  | ((element: T | null) => void)
+  | WriteSignal<T | null>;
+
+export type Attributes = {
+  ref?: Ref;
+  [key: string]: unknown;
+};
+
 export type ComponentProps = {
   key?: string | number | null;
-  attributes?: Record<string, unknown>;
+  attributes?: Attributes;
   children?: Child | Child[];
   [key: string]: unknown;
 };
@@ -19,7 +33,7 @@ export type ComponentProps = {
 export type Component<P = Record<string, unknown>> = (
   props: P & {
     key?: string | number | null;
-    attributes?: Record<string, unknown>;
+    attributes?: Attributes;
     children?: Child[];
   }
 ) => Renderable;
@@ -27,7 +41,7 @@ export type Component<P = Record<string, unknown>> = (
 export type VirtualNode = {
   type: string;
   key?: string | number | null;
-  attributes?: Record<string, unknown>;
+  attributes?: Attributes;
   props?: Record<string, unknown>;
   children?: Child[];
 };

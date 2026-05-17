@@ -22,10 +22,19 @@ export function setChildResolver(resolver) {
 /**
  * setAttributes() sets attributes on the element. If the value of an attribute is a Signal,
  * it will be updated whenever the signal changes.
+ *
+ * The `ref` key is special: it is not written to the DOM. Instead it is called
+ * with the mounted element (or `.set(element)`-ed if it is a Signal.State).
+ * On unmount the ref is invalidated with `null`.
  */
 export function setAttributes(element, attributes) {
     if (attributes && typeof attributes === 'object') {
         for (const [key, value] of Object.entries(attributes)) {
+            if (key === 'ref') {
+                attachRef(element, value);
+                continue;
+            }
+
             if (Signal.isState(value) || Signal.isComputed(value)) {
                 setSignalAttribute(element, key, value);
                 continue;
@@ -34,6 +43,31 @@ export function setAttributes(element, attributes) {
             element.setAttribute(key, value);
         }
     }
+}
+
+/**
+ * attachRef() invokes the ref with the freshly mounted DOM element and
+ * arranges for it to be invalidated with `null` on unmount. Supports two
+ * shapes:
+ *  - A callback: `(el: HTMLElement | null) => void`
+ *  - A Signal.State whose value is set with the element
+ */
+function attachRef(element, ref) {
+    if (!ref) return;
+
+    if (typeof ref === 'function') {
+        ref(element);
+        onUnmount(element, () => ref(null));
+        return;
+    }
+
+    if (Signal.isState(ref)) {
+        ref.set(element);
+        onUnmount(element, () => ref.set(null));
+        return;
+    }
+
+    console.warn('setAttributes: `ref` must be a function or Signal.State', ref);
 }
 
 /**
