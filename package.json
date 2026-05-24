@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "@incremental-code/last-act",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A minimal signal based web component library.",
   "main": "src/index.js",
   "types": "index.d.ts",
@@ -23,6 +23,9 @@
   ],
   "author": "",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "c8": "^10.1.3",
     "jsdom": "^29.1.1",
