@@ -126,14 +126,14 @@ describe('hydrate', () => {
         await tick();
 
         assert.equal(hydrated, existing);
-        assert.equal(existing.outerHTML, '<ul id="list"><li data-key="a">A</li>null</ul>');
+        assert.equal(existing.outerHTML, '<ul id="list"><li data-key="a">A</li></ul>');
 
         showB.set(true);
         await tick();
-        assert.equal(existing.outerHTML, '<ul id="list"><li data-key="a">A</li>null<li data-key="b">B</li></ul>');
+        assert.equal(existing.outerHTML, '<ul id="list"><li data-key="a">A</li><li data-key="b">B</li></ul>');
 
         showA.set(false);
         await tick();
-        assert.equal(existing.outerHTML, '<ul id="list">null<li data-key="b">B</li></ul>');
+        assert.equal(existing.outerHTML, '<ul id="list"><li data-key="b">B</li></ul>');
     });
 });
