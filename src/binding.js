@@ -40,6 +40,11 @@ export function setAttributes(element, attributes) {
                 continue;
             }
 
+            // Skip null/undefined static attributes
+            if (value === null || value === undefined) {
+                continue;
+            }
+
             element.setAttribute(key, value);
         }
     }

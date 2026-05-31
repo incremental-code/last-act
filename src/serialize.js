@@ -80,6 +80,11 @@ function serializeAttributes(vnode) {
                 continue;
             }
 
+            // Skip null/undefined static attributes
+            if (rawValue === null || rawValue === undefined) {
+                continue;
+            }
+
             attributes.set(key, String(rawValue));
         }
     }
