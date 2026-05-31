@@ -35,7 +35,7 @@ export function setAttributes(element, attributes) {
                 continue;
             }
 
-            if (Signal.isState(value) || Signal.isComputed(value)) {
+            if (isSignalValue(value)) {
                 setSignalAttribute(element, key, value);
                 continue;
             }
@@ -61,7 +61,7 @@ function attachRef(element, ref) {
         return;
     }
 
-    if (Signal.isState(ref)) {
+    if (isSignalValue(ref)) {
         ref.set(element);
         onUnmount(element, () => ref.set(null));
         return;
@@ -86,7 +86,7 @@ function attachRef(element, ref) {
  * @param {*Signal} signal 
  */
 export function setSignalAttribute(element, key, signal) {
-    if (!(Signal.isState(signal) || Signal.isComputed(signal))) {
+    if (!isSignalValue(signal)) {
         return console.warn(`setSignalAttribute: value for ${key} is not a Signal`, signal);
     }
 
@@ -138,7 +138,7 @@ export function setChildren(element, children) {
             // an array). Flatten so signals nested inside aren't missed by the
             // shallow hasSignals check below.
             const flat = children.flat(Infinity);
-            const hasSignals = flat.some(c => Signal.isState(c) || Signal.isComputed(c));
+            const hasSignals = flat.some(isSignalValue);
             if (hasSignals) {
                 setChildrenSignal(element, flat);
                 return;
@@ -150,7 +150,7 @@ export function setChildren(element, children) {
             element.appendChild(children);
         } else if (isVirtualNode(children)) {
             element.appendChild(childResolver(children));
-        } else if (Signal.isState(children) || Signal.isComputed(children)) {
+        } else if (isSignalValue(children)) {
             setChildrenSignal(element, children);
         } else {
             element.textContent = String(children);
@@ -159,7 +159,7 @@ export function setChildren(element, children) {
 }
 
 export function setChildrenSignal(element, signal) {
-    const isSignal = Signal.isState(signal) || Signal.isComputed(signal);
+    const isSignal = isSignalValue(signal);
     const isArray = Array.isArray(signal);
     if (!isSignal && !isArray) {
         return console.warn(`setChildrenSignal: value is not a Signal or array`, signal);
@@ -238,7 +238,7 @@ export function setChildrenSignal(element, signal) {
 
 function resolveChildrenArray(children) {
     return children.flatMap(child => {
-        const value = (Signal.isState(child) || Signal.isComputed(child))
+        const value = isSignalValue(child)
             ? child.get()
             : child;
         return normalizeChildren([value]);
@@ -265,4 +265,17 @@ function normalizeChildren(children) {
 
         return [document.createTextNode(String(child))];
     });
+}
+
+function isSignalValue(value) {
+    if (value == null) {
+        return false;
+    }
+
+    const type = typeof value;
+    if (type !== 'object' && type !== 'function') {
+        return false;
+    }
+
+    return Signal.isState(value) || Signal.isComputed(value);
 }

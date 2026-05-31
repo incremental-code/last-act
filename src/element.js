@@ -128,7 +128,7 @@ function resolveElementForVNode(vnode, hydrateNode) {
 }
 
 function containsSignal(children) {
-    if (Signal.isState(children) || Signal.isComputed(children)) {
+    if (isSignalValue(children)) {
         return true;
     }
     if (!Array.isArray(children)) {
@@ -202,6 +202,19 @@ function flattenSingleChild(child) {
 
 function isBlank(child) {
     return child === null || child === undefined || child === false || child === true;
+}
+
+function isSignalValue(value) {
+    if (value == null) {
+        return false;
+    }
+
+    const type = typeof value;
+    if (type !== 'object' && type !== 'function') {
+        return false;
+    }
+
+    return Signal.isState(value) || Signal.isComputed(value);
 }
 
 setChildResolver((child) => materialize(child));
