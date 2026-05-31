@@ -98,14 +98,16 @@ export function setSignalAttribute(element, key, signal) {
     const stop = effect(() => {
         const value = signal.get();
 
-        if (value === null || value === undefined || value === false || (Array.isArray(value) && value.length === 0)) {
+        if (value === null || value === undefined) {
             element.removeAttribute(key);
-        } else if (typeof value === 'boolean') {
-            element.setAttribute(key, '');
         } else if (Array.isArray(value)) {
-            element.setAttribute(key, value.join(' '));
+            if (value.length === 0) {
+                element.removeAttribute(key);
+            } else {
+                element.setAttribute(key, value.join(' '));
+            }
         } else {
-            element.setAttribute(key, value);
+            element.setAttribute(key, String(value));
         }
     });
 

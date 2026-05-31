@@ -56,23 +56,17 @@ function serializeAttributes(vnode) {
         for (const [key, rawValue] of Object.entries(vnode.attributes)) {
             if (isSignal(rawValue)) {
                 const signalValue = rawValue.get();
-                if (
-                    signalValue === null ||
-                    signalValue === undefined ||
-                    signalValue === false ||
-                    (Array.isArray(signalValue) && signalValue.length === 0)
-                ) {
+                if (signalValue === null || signalValue === undefined) {
                     attributes.delete(key);
                     continue;
                 }
 
-                if (typeof signalValue === 'boolean') {
-                    attributes.set(key, '');
-                    continue;
-                }
-
                 if (Array.isArray(signalValue)) {
-                    attributes.set(key, signalValue.join(' '));
+                    if (signalValue.length === 0) {
+                        attributes.delete(key);
+                    } else {
+                        attributes.set(key, signalValue.join(' '));
+                    }
                     continue;
                 }
 

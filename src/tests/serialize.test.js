@@ -56,7 +56,7 @@ describe('serialize', () => {
 
         assert.equal(
             serialize(tree),
-            '<button disabled="" class="a b" title="go">save</button>'
+            '<button disabled="true" class="a b" hidden="false" title="go">save</button>'
         );
     });
 

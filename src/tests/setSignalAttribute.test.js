@@ -59,20 +59,20 @@ describe('setSignalAttribute', () => {
         assert.equal(el.hasAttribute('aria-label'), false);
     });
 
-    test('removes attribute when signal value becomes false', async () => {
+    test('sets attribute to string when signal value is false', async () => {
         const el = dom.window.document.createElement('div');
         const sig = new Signal.State('present');
         setSignalAttribute(el, 'disabled', sig);
         sig.set(false);
         await tick();
-        assert.equal(el.hasAttribute('disabled'), false);
+        assert.equal(el.getAttribute('disabled'), 'false');
     });
 
-    test('sets attribute to empty string when signal value is true', () => {
+    test('sets attribute to string when signal value is true', () => {
         const el = dom.window.document.createElement('div');
         const sig = new Signal.State(true);
         setSignalAttribute(el, 'disabled', sig);
-        assert.equal(el.getAttribute('disabled'), '');
+        assert.equal(el.getAttribute('disabled'), 'true');
     });
 
     test('sets attribute from array values joined by space', () => {
