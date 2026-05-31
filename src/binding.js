@@ -277,5 +277,9 @@ function isSignalValue(value) {
         return false;
     }
 
-    return Signal.isState(value) || Signal.isComputed(value);
+    try {
+        return Signal.isState(value) || Signal.isComputed(value);
+    } catch {
+        return false;
+    }
 }
