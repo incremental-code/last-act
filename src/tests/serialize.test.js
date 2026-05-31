@@ -90,6 +90,26 @@ describe('serialize', () => {
         );
     });
 
+    test('serializes script text without HTML-escaping it', () => {
+        const tree = createElement('script', null, 'const fn = () => value < 3 && other > 1;');
+        assert.equal(
+            serialize(tree),
+            '<script>const fn = () => value < 3 && other > 1;</script>',
+        );
+    });
+
+    test('neutralizes raw-text closing tags inside script and style elements', () => {
+        const tree = createElement('div', null,
+            createElement('script', null, 'const end = "</script>";'),
+            createElement('style', null, 'main > section::after { content: "</style>"; }'),
+        );
+
+        assert.equal(
+            serialize(tree),
+            '<div><script>const end = "<\\/script>";</script><style>main > section::after { content: "<\\/style>"; }</style></div>',
+        );
+    });
+
     test('does not serialize non-attribute properties', () => {
         const tree = createElement('button', {
             value: 'ignored',

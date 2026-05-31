@@ -39,6 +39,9 @@ function serializeVirtualNode(vnode) {
     }
 
     const children = resolveChildren(vnode.children);
+    if (isRawTextElement(vnode.type)) {
+        return `${openingTag}${serializeRawText(children, vnode.type)}</${vnode.type}>`;
+    }
     const inner = serializeTokens(children);
     return `${openingTag}${inner}</${vnode.type}>`;
 }
@@ -183,6 +186,27 @@ function escapeText(value) {
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;');
+}
+
+function isRawTextElement(type) {
+    return type === 'script' || type === 'style';
+}
+
+function serializeRawText(tokens, type) {
+    const closingTag = `</${type}`;
+    return tokens.map(token => serializeRawTextToken(token, type)).join('').replaceAll(closingTag, `<\\/${type}`);
+}
+
+function serializeRawTextToken(token, type) {
+    if (isVirtualNode(token)) {
+        return '';
+    }
+
+    if (isDomNode(token)) {
+        return token.textContent || '';
+    }
+
+    return String(token);
 }
 
 function escapeAttribute(value) {

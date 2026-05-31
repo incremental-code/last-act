@@ -61,4 +61,22 @@ Use a `Signal.Computed` that returns either an element or a different element. P
 **Effect scheduling**
 `effect(fn)` runs `fn` once immediately inside a `Signal.Computed`, then re-runs it (via a microtask-queued `Watcher`) whenever any signal read inside `fn` changes. Multiple signal changes in the same microtask are batched into a single re-run.
 
+**SSR hydration gap**
+`hydrate(vnode, existingElement)` expects the client to rebuild the same vnode tree that was rendered on the server, then walks the existing DOM to attach reactive behavior. That keeps SSR and client output consistent, but it also means there is currently no `noHydrate`, `static`, or island-style boundary for server-only content.
+
+This becomes a stack limitation when a page contains large static content that should be rendered on the server but does not need any client-side behavior. For example, a blog article page might parse markdown into a full vnode tree on the server:
+
+```js
+function BlogPostPage({ page }) {
+  return createElement('article', null,
+    createElement('h1', null, page.title),
+    renderMarkdown(page.body)
+  )
+}
+```
+
+With the current model, the browser still has to rebuild `BlogPostPage` and run `renderMarkdown(page.body)` again during hydration so that `hydrate(...)` can match the existing DOM. That is correct, but it is unnecessary client work for content that is effectively static.
+
+Today the workaround is to keep the server and client render path deterministic and accept the extra hydration cost. A future stack improvement would be an explicit SSR-only boundary so apps can render static sections on the server without re-running them on the client.
+
 ---
