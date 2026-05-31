@@ -93,7 +93,7 @@ function resolveChildren(children) {
     }
 
     if (Array.isArray(children)) {
-        const hasSignals = children.some(child => Signal.isState(child) || Signal.isComputed(child));
+        const hasSignals = children.some(child => isSignal(child));
         if (hasSignals) {
             return resolveChildrenArray(children);
         }

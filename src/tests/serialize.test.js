@@ -69,6 +69,16 @@ describe('serialize', () => {
         assert.equal(serialize(tree), '<div>Berlin</div>');
     });
 
+    test('serializes component child arrays that mix primitives and signals', () => {
+        function Wrapper({ children }) {
+            return createElement('div', null, children);
+        }
+
+        const count = new Signal.State(2);
+        const tree = createElement(Wrapper, null, 'Count: ', count);
+        assert.equal(serialize(tree), '<div>Count: 2</div>');
+    });
+
     test('escapes text and attribute content', () => {
         const tree = createElement('div', {
             attributes: { title: 'a"b&c<d>' },
