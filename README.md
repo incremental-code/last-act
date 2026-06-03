@@ -79,4 +79,7 @@ With the current model, the browser still has to rebuild `BlogPostPage` and run 
 
 Today the workaround is to keep the server and client render path deterministic and accept the extra hydration cost. A future stack improvement would be an explicit SSR-only boundary so apps can render static sections on the server without re-running them on the client.
 
+**Fragment root gap**
+`mount(...)` and `hydrate(...)` currently assume a single root node. Components that return sibling fragments or arrays can work in SSR output, but client-side mounting can stringify them or fail to reconcile them as a unit. For apps using `last-router`, that means page components should still wrap multiple top-level nodes in one element until fragment-root support lands in `last-act`.
+
 ---
