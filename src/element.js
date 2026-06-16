@@ -115,7 +115,7 @@ function resolveElementForVNode(vnode, hydrateNode) {
         return document.createElement(vnode.type);
     }
 
-    if (!(hydrateNode instanceof HTMLElement)) {
+    if (!(hydrateNode instanceof Element)) {
         throw new Error(`hydrate: expected <${vnode.type}> but found non-element node`);
     }
 
