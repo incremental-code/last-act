@@ -118,17 +118,37 @@ export function setSignalAttribute(element, key, signal) {
  * setProperties() sets properties on the element. 
  * 
  * This is for setting properties that are not attributes, like "value" or "checked".
- * If the value of a property is a Signal, it will be passed through as is,
- * so that the component can handle it appropriately.
+ * If the value of a property is a Signal and the element is an HTMLElement,
+ * it will be bound reactively so that the property updates whenever the signal changes.
+ * Otherwise, the signal object is passed through as-is.
  * 
  * Children are not included in the props here.
  */
 export function setProperties(element, props) {
     if (props && typeof props === 'object') {
         for (const [key, value] of Object.entries(props)) {
-            element[key] = value;
+            if (element instanceof HTMLElement && isSignalValue(value)) {
+                setSignalProperty(element, key, value);
+            } else {
+                element[key] = value;
+            }
         }
     }
+}
+
+/**
+ * setSignalProperty() sets a property on the element that is updated whenever the signal changes.
+ * @param {HTMLElement} element 
+ * @param {string} key 
+ * @param {Signal} signal 
+ */
+function setSignalProperty(element, key, signal) {
+    const stop = effect(() => {
+        const value = signal.get();
+        element[key] = value;
+    });
+
+    onUnmount(element, stop);
 }
 
 /**
