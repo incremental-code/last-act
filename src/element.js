@@ -3,6 +3,25 @@ import { moveOnUnmount } from './lifecycle.js';
 import { setAttributes, setProperties, setChildren, setKey, setChildResolver } from './binding.js';
 import { createVirtualNode, isVirtualNode, MOUNTED_NODE } from './vnode.js';
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const NAMESPACE = Symbol('namespace');
+
+// document.createElement('circle') makes an inert HTML element, so everything
+// under <svg> must go through createElementNS. Each element hands its
+// namespace to its child vnodes as it is built; <foreignObject> content is
+// HTML again.
+function namespaceFor(vnode) {
+    return vnode.type === 'svg' ? SVG_NS : vnode[NAMESPACE];
+}
+
+function passNamespace(vnode, children) {
+    const ns = vnode.type === 'foreignObject' ? undefined : namespaceFor(vnode);
+    if (!ns) return;
+    for (const child of [children].flat(Infinity)) {
+        if (isVirtualNode(child) && !child[MOUNTED_NODE]) child[NAMESPACE] = ns;
+    }
+}
+
 /**
  * createElement creates a virtual node for native tags,
  * or executes a function component that returns a renderable value.
@@ -89,6 +108,7 @@ function materialize(renderable, options = {}) {
         setKey(element, renderable.key);
         setAttributes(element, renderable.attributes);
         setProperties(element, renderable.props);
+        passNamespace(renderable, renderable.children);
 
         if (options.hydrateNode && !containsSignal(renderable.children)) {
             hydrateStaticChildren(element, renderable.children);
@@ -112,7 +132,8 @@ function materialize(renderable, options = {}) {
 
 function resolveElementForVNode(vnode, hydrateNode) {
     if (hydrateNode == null) {
-        return document.createElement(vnode.type);
+        const ns = namespaceFor(vnode);
+        return ns ? document.createElementNS(ns, vnode.type) : document.createElement(vnode.type);
     }
 
     if (!(hydrateNode instanceof Element)) {
