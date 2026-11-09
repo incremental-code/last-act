@@ -160,4 +160,41 @@ describe('createElement', () => {
             assert.equal(el.textContent, 'Hello, Alice!');
         });
     });
+
+    describe('svg', () => {
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const HTML_NS = 'http://www.w3.org/1999/xhtml';
+
+        test('mounts <svg> and its descendants in the SVG namespace', () => {
+            const el = mount(createElement('div', null,
+                createElement('svg', { attributes: { viewBox: '0 0 10 10' } },
+                    createElement('g', null, [createElement('circle', { attributes: { r: '4' } })]),
+                ),
+            ));
+            assert.equal(el.namespaceURI, HTML_NS);
+            assert.equal(el.querySelector('svg').namespaceURI, SVG_NS);
+            assert.equal(el.querySelector('g').namespaceURI, SVG_NS);
+            assert.equal(el.querySelector('circle').namespaceURI, SVG_NS);
+            assert.equal(el.querySelector('circle').getAttribute('r'), '4');
+        });
+
+        test('reaches vnodes returned by components inside <svg>', () => {
+            const Dot = () => createElement('circle', null);
+            const el = mount(createElement('svg', null, createElement(Dot)));
+            assert.equal(el.querySelector('circle').namespaceURI, SVG_NS);
+        });
+
+        test('switches back to HTML inside <foreignObject>', () => {
+            const el = mount(createElement('svg', null,
+                createElement('foreignObject', null, createElement('p', null, 'hi')),
+            ));
+            assert.equal(el.querySelector('foreignObject').namespaceURI, SVG_NS);
+            assert.equal(el.querySelector('p').namespaceURI, HTML_NS);
+        });
+
+        test('leaves elements outside <svg> as HTML', () => {
+            const el = mount(createElement('div', null, createElement('span', null, 'x')));
+            assert.equal(el.querySelector('span').namespaceURI, HTML_NS);
+        });
+    });
 });
