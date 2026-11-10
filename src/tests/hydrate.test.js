@@ -7,14 +7,16 @@ import { onUnmount } from '../lifecycle.js';
 import { serialize } from '../serialize.js';
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-let origWindow, origDocument;
+let origWindow, origDocument, origElement;
 
 before(() => {
     origWindow = global.window;
     origDocument = global.document;
+    origElement = global.Element;
     global.window = dom.window;
     global.document = dom.window.document;
     global.Node = dom.window.Node;
+    global.Element = dom.window.Element;
     global.HTMLElement = dom.window.HTMLElement;
     global.MutationObserver = dom.window.MutationObserver;
 });
@@ -22,6 +24,7 @@ before(() => {
 after(() => {
     global.window = origWindow;
     global.document = origDocument;
+    global.Element = origElement;
 });
 
 const tick = () => new Promise(resolve => queueMicrotask(resolve));

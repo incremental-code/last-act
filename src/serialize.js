@@ -1,5 +1,6 @@
 import { Signal } from 'signal-polyfill';
 import { isVirtualNode } from './vnode.js';
+import { attributeValue } from './attribute.js';
 
 const VOID_TAGS = new Set([
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
@@ -54,32 +55,14 @@ function serializeAttributes(vnode) {
 
     if (vnode.attributes && typeof vnode.attributes === 'object') {
         for (const [key, rawValue] of Object.entries(vnode.attributes)) {
-            if (isSignal(rawValue)) {
-                const signalValue = rawValue.get();
-                if (signalValue === null || signalValue === undefined) {
-                    attributes.delete(key);
-                    continue;
-                }
-
-                if (Array.isArray(signalValue)) {
-                    if (signalValue.length === 0) {
-                        attributes.delete(key);
-                    } else {
-                        attributes.set(key, signalValue.join(' '));
-                    }
-                    continue;
-                }
-
-                attributes.set(key, String(signalValue));
-                continue;
+            // `ref` is a client-side hook (see setAttributes), not a DOM attribute.
+            if (key === 'ref') continue;
+            const attribute = attributeValue(isSignal(rawValue) ? rawValue.get() : rawValue);
+            if (attribute === null) {
+                attributes.delete(key);
+            } else {
+                attributes.set(key, attribute);
             }
-
-            // Skip null/undefined static attributes
-            if (rawValue === null || rawValue === undefined) {
-                continue;
-            }
-
-            attributes.set(key, String(rawValue));
         }
     }
 

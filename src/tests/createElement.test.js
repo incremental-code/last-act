@@ -1,6 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
+import { Signal } from 'signal-polyfill';
 import { createElement, mount, getMountedNode } from '../element.js';
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
@@ -19,6 +20,8 @@ after(() => {
     global.window = originalWindow;
     global.document = originalDocument;
 });
+
+const tick = () => new Promise(resolve => setTimeout(resolve));
 
 describe('createElement', () => {
     describe('native element', () => {
@@ -190,6 +193,34 @@ describe('createElement', () => {
             ));
             assert.equal(el.querySelector('foreignObject').namespaceURI, SVG_NS);
             assert.equal(el.querySelector('p').namespaceURI, HTML_NS);
+        });
+
+        test('binds signal attributes on SVG elements, false removes them', async () => {
+            const r = new Signal.State('4');
+            const hidden = new Signal.State(true);
+            const el = mount(createElement('svg', null,
+                createElement('circle', { attributes: { r, visibility: hidden } }),
+            ));
+            const circle = el.querySelector('circle');
+            assert.equal(circle.getAttribute('r'), '4');
+            assert.equal(circle.getAttribute('visibility'), '');
+            r.set('8');
+            hidden.set(false);
+            await tick();
+            assert.equal(circle.getAttribute('r'), '8');
+            assert.equal(circle.hasAttribute('visibility'), false);
+        });
+
+        test('binds signal properties on SVG elements', async () => {
+            const label = new Signal.State('a');
+            const el = mount(createElement('svg', null,
+                createElement('text', { textContent: label }),
+            ));
+            const text = el.querySelector('text');
+            assert.equal(text.textContent, 'a');
+            label.set('b');
+            await tick();
+            assert.equal(text.textContent, 'b');
         });
 
         test('leaves elements outside <svg> as HTML', () => {

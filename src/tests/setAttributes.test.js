@@ -39,6 +39,19 @@ describe('setAttributes', () => {
         assert.equal(el.getAttribute('data-val'), '1');
     });
 
+    test('static true sets an empty attribute and static false omits it', () => {
+        const el = dom.window.document.createElement('button');
+        setAttributes(el, { disabled: false, hidden: true });
+        assert.equal(el.hasAttribute('disabled'), false);
+        assert.equal(el.getAttribute('hidden'), '');
+    });
+
+    test('joins static array values with spaces', () => {
+        const el = dom.window.document.createElement('div');
+        setAttributes(el, { class: ['a', 'b'] });
+        assert.equal(el.getAttribute('class'), 'a b');
+    });
+
     test('does nothing when attributes is null', () => {
         const el = dom.window.document.createElement('div');
         assert.doesNotThrow(() => setAttributes(el, null));

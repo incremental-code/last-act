@@ -226,6 +226,44 @@ describe('setChildrenSignal', () => {
             assert.equal(container.children[2], b);
         });
 
+        test('reorders fresh nodes that reuse keys without leaving stale nodes', async () => {
+            const container = el();
+            const sig = new Signal.State(['a', 'b']);
+            setChildrenSignal(container, new Signal.Computed(() => sig.get().map(k => node('li', k))));
+            sig.set(['b', 'a']);
+            await tick();
+            assert.deepEqual([...container.children].map(n => n.dataset.key), ['b', 'a']);
+            sig.set(['c', 'b', 'a']);
+            await tick();
+            assert.deepEqual([...container.children].map(n => n.dataset.key), ['c', 'b', 'a']);
+            sig.set(['a']);
+            await tick();
+            assert.deepEqual([...container.children].map(n => n.dataset.key), ['a']);
+        });
+
+        test('removes a keyed child without touching a nested element with the same key', async () => {
+            const container = el();
+            const outer = node('div', 'x');
+            const keep = node('div', 'y');
+            keep.appendChild(node('span', 'x'));
+            const sig = new Signal.State([keep, outer]);
+            setChildrenSignal(container, sig);
+            sig.set([keep]);
+            await tick();
+            assert.deepEqual([...container.children], [keep]);
+            assert.equal(keep.children.length, 1);
+        });
+
+        test('drops leftover unkeyed nodes when switching to a keyed list', async () => {
+            const container = el();
+            const sig = new Signal.State('loading');
+            const a = node('span', 'a');
+            setChildrenSignal(container, sig);
+            sig.set([a]);
+            await tick();
+            assert.deepEqual([...container.childNodes], [a]);
+        });
+
         test('interleaves new and existing nodes', async () => {
             const container = el();
             const [a, c, e] = ['a', 'c', 'e'].map(k => node('span', k));

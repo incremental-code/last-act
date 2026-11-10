@@ -2,6 +2,7 @@ import { effect } from "./effect.js";
 import { Signal } from "signal-polyfill";
 import { onUnmount } from "./lifecycle.js";
 import { isVirtualNode } from "./vnode.js";
+import { attributeValue } from "./attribute.js";
 
 let childResolver = (child) => child;
 
@@ -40,12 +41,10 @@ export function setAttributes(element, attributes) {
                 continue;
             }
 
-            // Skip null/undefined static attributes
-            if (value === null || value === undefined) {
-                continue;
+            const attribute = attributeValue(value);
+            if (attribute !== null) {
+                element.setAttribute(key, attribute);
             }
-
-            element.setAttribute(key, value);
         }
     }
 }
@@ -76,15 +75,10 @@ function attachRef(element, ref) {
 }
 
 /**
- * setSignalAttribute() sets an attribute on the element that is updated whenever the signal changes,
- * and is removed when the signal value is null or undefined.
- * 
- * When the signal value is a boolean, the attribute is added when the value is true, and removed when the value is false.
- * This is useful for attributes like "disabled" or "hidden".
- * 
- * When the signal value is an array, the attribute is added with a space-separated list of values when the array is non-empty, and removed when the array is empty.
- * This is useful for attributes like "class" or "rel".
- * 
+ * setSignalAttribute() sets an attribute on the element that is updated whenever the signal changes.
+ * Values are converted by attributeValue(): null, undefined, false and [] remove the attribute,
+ * true sets it to "" (useful for "disabled" or "hidden"), and arrays are joined with spaces.
+ *
  * When the element is unmounted, the signal subscription is automatically cleaned up.
  * @param {HTMLElement} element 
  * @param {*string} key 
@@ -96,18 +90,12 @@ export function setSignalAttribute(element, key, signal) {
     }
 
     const stop = effect(() => {
-        const value = signal.get();
+        const attribute = attributeValue(signal.get());
 
-        if (value === null || value === undefined) {
+        if (attribute === null) {
             element.removeAttribute(key);
-        } else if (Array.isArray(value)) {
-            if (value.length === 0) {
-                element.removeAttribute(key);
-            } else {
-                element.setAttribute(key, value.join(' '));
-            }
         } else {
-            element.setAttribute(key, String(value));
+            element.setAttribute(key, attribute);
         }
     });
 
@@ -118,7 +106,7 @@ export function setSignalAttribute(element, key, signal) {
  * setProperties() sets properties on the element. 
  * 
  * This is for setting properties that are not attributes, like "value" or "checked".
- * If the value of a property is a Signal and the element is an HTMLElement,
+ * If the value of a property is a Signal and the element is a DOM Element (HTML or SVG),
  * it will be bound reactively so that the property updates whenever the signal changes.
  * Otherwise, the signal object is passed through as-is.
  * 
@@ -127,7 +115,7 @@ export function setSignalAttribute(element, key, signal) {
 export function setProperties(element, props) {
     if (props && typeof props === 'object') {
         for (const [key, value] of Object.entries(props)) {
-            if (element instanceof HTMLElement && isSignalValue(value)) {
+            if (isElement(element) && isSignalValue(value)) {
                 setSignalProperty(element, key, value);
             } else {
                 element[key] = value;
@@ -211,7 +199,7 @@ export function setChildrenSignal(element, signal) {
 
         const normalizedChildren = normalizeChildren(value);
         const canReconcileByKey = normalizedChildren.every(child => (
-            child instanceof HTMLElement && child.dataset.key
+            isElement(child) && child.dataset.key
         ));
 
         if (!canReconcileByKey) {
@@ -219,44 +207,27 @@ export function setChildrenSignal(element, signal) {
             return;
         }
 
-        // This could be the first or subsequent update,
-        // so we need to clear children that shouldn't be here anymore.
-        // First collect all the existing keys.
-        const existingKeys = [];
-        for (const child of element.childNodes) {
-            if (child instanceof HTMLElement && child.dataset.key) {
-                existingKeys.push(child.dataset.key);
-            }
-        }
-        
-        // Then remove any chilren that aren't in the new value or have a different key.
-        const existingKeysToRemove = existingKeys.filter(key => {
-            return !normalizedChildren.find(child => child.dataset.key === key);
-        });
-
-        // Remove the children that aren't in the new value or have a different key.
-        for (const key of existingKeysToRemove) {
-            const childToRemove = element.querySelector(`[data-key="${key}"]`);
-            if (childToRemove) {
-                element.removeChild(childToRemove);
-            }
-        }
-
-        // Finally, add or move the new children into the correct order.
-        // For each position in value, if the slot is empty or holds a different key,
-        // insertBefore places the child there (insertBefore with null appends).
-        // If the key matches but the element reference changed (e.g. a sub-signal produced
-        // a new node), replaceChild swaps it in-place.
+        // Place each new child at its index, in order. Slots before the index
+        // already hold their final child, so moving a node never disturbs them.
+        // If the slot is empty or holds a different key, insertBefore places the child
+        // there (insertBefore with null appends). If the key matches but the element
+        // reference changed (e.g. a computed produced a new node), replaceChild swaps it in-place.
         for (const [index, child] of normalizedChildren.entries()) {
-            const current = element.children[index];
+            const current = element.childNodes[index];
             if (current === child) {
                 continue;
             }
-            if (current && current.dataset.key === child.dataset.key) {
+            if (isElement(current) && current.dataset.key === child.dataset.key) {
                 element.replaceChild(child, current);
                 continue;
             }
             element.insertBefore(child, current || null);
+        }
+
+        // Everything after the placed children is stale: keys that are gone, and old
+        // nodes whose key was taken over by a new node.
+        while (element.childNodes.length > normalizedChildren.length) {
+            element.lastChild.remove();
         }
     });
 
@@ -292,6 +263,11 @@ function normalizeChildren(children) {
 
         return [document.createTextNode(String(child))];
     });
+}
+
+// Matches HTML and SVG elements alike (SVGElement is not an HTMLElement).
+function isElement(value) {
+    return value?.nodeType === Node.ELEMENT_NODE;
 }
 
 function isSignalValue(value) {

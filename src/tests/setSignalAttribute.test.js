@@ -59,20 +59,32 @@ describe('setSignalAttribute', () => {
         assert.equal(el.hasAttribute('aria-label'), false);
     });
 
-    test('sets attribute to string when signal value is false', async () => {
-        const el = dom.window.document.createElement('div');
-        const sig = new Signal.State('present');
+    test('removes attribute when signal value becomes false', async () => {
+        const el = dom.window.document.createElement('button');
+        const sig = new Signal.State(true);
         setSignalAttribute(el, 'disabled', sig);
+        assert.equal(el.disabled, true);
         sig.set(false);
         await tick();
-        assert.equal(el.getAttribute('disabled'), 'false');
+        assert.equal(el.hasAttribute('disabled'), false);
+        assert.equal(el.disabled, false);
     });
 
-    test('sets attribute to string when signal value is true', () => {
+    test('sets attribute to empty string when signal value is true', () => {
         const el = dom.window.document.createElement('div');
         const sig = new Signal.State(true);
         setSignalAttribute(el, 'disabled', sig);
-        assert.equal(el.getAttribute('disabled'), 'true');
+        assert.equal(el.getAttribute('disabled'), '');
+    });
+
+    test('passes the strings "true" and "false" through for aria attributes', async () => {
+        const el = dom.window.document.createElement('div');
+        const sig = new Signal.State('false');
+        setSignalAttribute(el, 'aria-expanded', sig);
+        assert.equal(el.getAttribute('aria-expanded'), 'false');
+        sig.set('true');
+        await tick();
+        assert.equal(el.getAttribute('aria-expanded'), 'true');
     });
 
     test('sets attribute from array values joined by space', () => {

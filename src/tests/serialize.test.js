@@ -56,8 +56,16 @@ describe('serialize', () => {
 
         assert.equal(
             serialize(tree),
-            '<button disabled="true" class="a b" hidden="false" title="go">save</button>'
+            '<button disabled="" class="a b" title="go">save</button>'
         );
+    });
+
+    test('serializes static boolean and array attributes like signal ones', () => {
+        const tree = createElement('input', {
+            attributes: { disabled: true, hidden: false, class: ['a', 'b'], 'aria-checked': 'false' },
+        });
+
+        assert.equal(serialize(tree), '<input disabled="" class="a b" aria-checked="false">');
     });
 
     test('serializes signal children by current value', () => {
@@ -108,6 +116,14 @@ describe('serialize', () => {
             serialize(tree),
             '<div><script>const end = "<\\/script>";</script><style>main > section::after { content: "<\\/style>"; }</style></div>',
         );
+    });
+
+    test('does not serialize ref', () => {
+        const tree = createElement('div', {
+            attributes: { id: 'x', ref: () => {} },
+        });
+
+        assert.equal(serialize(tree), '<div id="x"></div>');
     });
 
     test('does not serialize non-attribute properties', () => {
