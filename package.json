@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "@incremental-code/last-act",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A minimal signal based web component library.",
   "main": "src/index.js",
   "types": "index.d.ts",
